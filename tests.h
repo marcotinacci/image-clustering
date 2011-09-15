@@ -15,11 +15,12 @@
 #include "distance_matrix.h"
 #include "img2key.h"
 #include "mpi_routines.h"
+#include "mask.h"
 
 using namespace std;
 
+#define NUM_CLUSTERS 4
 #define DEBUG
-#define SKIP
 
 /*
  * test globale

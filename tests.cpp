@@ -28,12 +28,9 @@ void test_main_mpi(int argc, char* argv[]){
 		
 	if(myrank == 0){ // master
 		cout << "DISTRIBUZIONE E CONVERSIONE IMMAGINI" << endl;
-		//#ifndef SKIP
 		master_scatter_keys(0,nel,np,img_names,&local_nel,&desc_array);
-		//#endif
 
 		MPI_Barrier(MPI_COMM_WORLD); // TODO eliminare in deploy
-
 		cout << "ELABORAZIONE MATRICE DISTANZE" << endl;
 		
 		int *map = NULL;
@@ -41,29 +38,49 @@ void test_main_mpi(int argc, char* argv[]){
 		sim_metric **matrix_parts = NULL;
 		unsigned int nel_parts = 0;
 		master_compute_map(np, &map, &nel_map);
-		master_compute_matrix(0, nel, np, local_nel, desc_array, &matrix_parts, &nel_parts);
-		print_matrix_parts(matrix_parts, nel_parts, 0, np, nel);
-		max_info local_max, global_max;
-		local_max_reduce(matrix_parts, nel_parts, 0, np, nel, &local_max);
-//		printf("master max = %d, index = %d (%d,%d)\n", max, index_max, c1, c2);
-		
-		master_max_reduce(&local_max, &global_max, 0, np);
-		//printf("global max = %d (%d,%d,%d,%d)\n",
-		//	global_max.val, global_max.row, global_max.col, global_max.rank, global_max.index_part);
-		
-		//master_clusterize(global_max, map, nel, np, &matrix_parts, nel_parts);
-		
+		master_compute_matrix(0, nel, np, local_nel, desc_array, &matrix_parts,
+				&nel_parts);
+		//print_matrix_parts(matrix_parts, nel_parts, 0, np, nel);
+
+		MPI_Barrier(MPI_COMM_WORLD); // TODO eliminare in deploy
+		cout << "CLUSTERING" << endl;
+
+		// crea i cluster
+		cluster *clusters = init_cluster();
+		// alloca la lista di cluster, ogni cluster e' una lista di indici
+		for(int i=0; i < (int)nel; i++){
+			clusters->insert(pair<unsigned int, list<unsigned int> > (i,
+					list<unsigned int>(1,i)));
+		}
+
+		// crea maschera
+		int *mask = init_mask(np);
+
+		for(unsigned int i=0; i < nel - NUM_CLUSTERS; i++){
+			cout << "Giro " << i << endl;
+			unsigned int c1, c2;
+			max_info local_max, global_max;
+
+			send_mask(mask, np);
+			local_max_reduce(matrix_parts, nel_parts, 0, np, nel, &local_max,
+					mask);
+			//printf("master max = %d, index = %d (%d,%d)\n", max, index_max, c1, c2);
+
+			master_max_reduce(&local_max, &global_max, 0, np, clusters, mask);
+
+			master_clusterize(global_max, map, nel, np, &matrix_parts,
+					nel_parts, clusters, mask);
+		}
 		//print_matrix_parts(matrix_parts, nel_parts, 0, np, nel);
 		/*
 			TODO 
 				clustering distribuito
 				scrittura del file html di output
 		*/
-
+		// distruggi i cluster
+		destroy_cluster(clusters);
 	}else{ // slaves
-		//#ifndef SKIP
 		slave_scatter_keys(myrank, nel, np, &local_nel, &desc_array);
-		//#endif
 		
 		MPI_Barrier(MPI_COMM_WORLD); // TODO eliminare in deploy
 		
@@ -71,12 +88,18 @@ void test_main_mpi(int argc, char* argv[]){
 		unsigned int nel_parts = 0;
 		slave_compute_matrix(myrank, nel, np, desc_array, local_nel, &matrix_parts, &nel_parts);
 		//print_matrix_parts(matrix_parts, nel_parts, myrank, np, nel);
-		max_info local_max;
-		local_max_reduce(matrix_parts, nel_parts, myrank, np, nel, &local_max);
-//		printf("slave max = %d, index = %d (%d,%d)\n", max, index_max, c1, c2);
-		
-		//slave_max_reduce(&local_max);
-		//slave_clusterize(myrank, nel, np, &matrix_parts, nel_parts);
+
+		MPI_Barrier(MPI_COMM_WORLD); // TODO eliminare in deploy
+
+		int* mask;
+		for(unsigned int i=0; i < nel -NUM_CLUSTERS; i++){
+			max_info local_max;
+			mask = receive_mask(np);
+			local_max_reduce(matrix_parts, nel_parts, myrank, np, nel,
+					&local_max, mask);
+			slave_max_reduce(&local_max);
+			slave_clusterize(myrank, nel, np, &matrix_parts, nel_parts);
+		}
 
 	}
 	MPI_Finalize();	

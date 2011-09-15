@@ -13,6 +13,8 @@
 #include "img2key.h"
 #include "siftget.h"
 #include "findlink.h"
+#include "mask.h"
+#include "cluster.h"
 
 #define TAG_DISTRIB_IMGS 		1
 #define TAG_TRANSFER_INFO 		2
@@ -20,9 +22,13 @@
 #define TAG_ARRAY_SIFT			4
 #define TAG_CLUSTER_1 			5
 #define TAG_CLUSTER_2 			6
+#define TAG_PRINT				7
 #define IMG_MAX_LEN 350000
 #define IMG_FOLDER "images"
 #define FILENAME_MAX_LEN 21
+
+#define SKIP_CONVERSION
+//#define VERBOSE
 
 using namespace std;
 
@@ -34,24 +40,34 @@ typedef struct _max_info{
 	sim_metric val;
 }max_info;
 
-void slave_clusterize(const unsigned int myrank, const unsigned int nel, const unsigned int np, 
-	sim_metric ***matrix_parts, const unsigned int nel_parts);
+void slave_clusterize(const unsigned int myrank, const unsigned int nel,
+		const unsigned int np, sim_metric ***matrix_parts,
+		const unsigned int nel_parts);
 	
-void master_clusterize(const max_info &maxinfo, const int *map, const unsigned int nel, 
-	const unsigned int np, sim_metric ***matrix_parts, const unsigned int matrix_nel);
+void master_clusterize(const max_info &maxinfo, const int *map,
+		const unsigned int nel, const unsigned int np,
+		sim_metric ***matrix_parts, const unsigned int matrix_nel,
+		cluster* clusters, int* mask);
 
-void send_stripe(const unsigned int myrank, const unsigned int np, const unsigned int nel, unsigned int * info,
-	sim_metric** matrix_parts);
+void send_stripe(const unsigned int myrank, const unsigned int np,
+		const unsigned int nel, unsigned int * info,
+		sim_metric** matrix_parts);
 	
-sim_metric * recv_stripe(const unsigned int myrank, const unsigned int np, const unsigned int nel, unsigned int * info,
-	sim_metric ***matrix_parts);
+sim_metric * recv_stripe(const unsigned int myrank, const unsigned int np,
+		const unsigned int nel, unsigned int * info,
+		sim_metric ***matrix_parts);
 
-void master_max_reduce(max_info * local_max, max_info * global_max, const int myrank, const int np);
+sim_metric * get_local_stripe(const unsigned int myrank, const unsigned int np,
+		const unsigned int nel, unsigned int * info, sim_metric **matrix_parts);
+
+void master_max_reduce(max_info * local_max, max_info * global_max,
+		const int myrank, const int np, cluster* clusters, int* mask);
 
 void slave_max_reduce(max_info * local_max);
 
-void master_scatter_keys(const int myrank, const unsigned int nel, const unsigned int np, 
-	string* img_names ,unsigned int* local_nel, SIFTs*** desc);
+void master_scatter_keys(const int myrank, const unsigned int nel,
+		const unsigned int np, string* img_names ,unsigned int* local_nel,
+		SIFTs*** desc);
 	
 void slave_scatter_keys(const int myrank, const unsigned int nel, const unsigned int np, 
 	unsigned int *local_nel, SIFTs ***desc_array);
@@ -85,8 +101,9 @@ unsigned int get_index_part(const int myrank, const unsigned int np, const unsig
 void update_local_cluster(sim_metric *part, sim_metric *buf, const unsigned int index_cluster, 
 	const unsigned int row, const unsigned int col, const unsigned int direction);
 
-void local_max_reduce(sim_metric** parts, const unsigned int nel_parts, const int myrank,
-	const unsigned int np, const unsigned int nel, max_info *maxinf);
+void local_max_reduce(sim_metric** parts, const unsigned int nel_parts,
+		const int myrank, const unsigned int np, const unsigned int nel,
+		max_info *maxinf, const int *mask);
 //void local_max_reduce(sim_metric** parts, const unsigned int nel_parts, const int myrank,
 //	const unsigned int np, const unsigned int nel, sim_metric* max, unsigned int* index_part,
 //	unsigned int* c1, unsigned int* c2);
@@ -171,4 +188,36 @@ void receive_file(const char* filename, int src, int dest);
  */
 void copy_local_file(const char* sourcename, const char* destname);
 
+/*
+ * spedisci la maschera completa a tutti gli slaves
+ * mask: vettore maschera
+ * np: numero terminali / lunghezza vettore maschera
+ */
+void send_mask(int *mask, int np);
+
+/*
+ * ricevi la maschera completa dal master
+ * np: numero terminali / lunghezza vettore maschera
+ */
+int* receive_mask(int np);
+
+/*
+ * converti gli indici riga e colonna della matrice globale a indici riga e
+ * colonna della matrice mappa
+ */
+void matrix_to_map_index(const int matrix_row, const int matrix_col,
+		const int nel, int *map_row, int *map_col,
+		const int np);
+
+/*
+ * stampa la matrice triangolare globale (master)
+ */
+void master_print_global_matrix(sim_metric ***matrix_parts, const int *map,
+		const int nel, const int np);
+
+/*
+ * stampa la matrice triangolare globale (slave)
+ */
+void slave_print_global_matrix(const int myrank, sim_metric ***matrix_parts,
+		const int *map, const int nel, const int np);
 #endif

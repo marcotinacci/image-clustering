@@ -3,7 +3,7 @@
 CC=mpic++
 CFLAGS= -c -Wall -O6 -fopenmp
 # lista dei file sorgenti
-SOURCES=main.cpp siftget.cpp siftcmp.cpp merge.cpp findlink.cpp distance_matrix.cpp cluster.cpp clusterize.cpp file_desc.cpp tests.cpp img2key.cpp mpi_routines.cpp
+SOURCES=main.cpp siftget.cpp siftcmp.cpp merge.cpp findlink.cpp distance_matrix.cpp cluster.cpp clusterize.cpp file_desc.cpp tests.cpp img2key.cpp mpi_routines.cpp mask.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
 EXECUTABLE=app
 
