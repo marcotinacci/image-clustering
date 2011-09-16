@@ -30,6 +30,9 @@
 #define SKIP_CONVERSION
 //#define VERBOSE
 
+#define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
+#define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
+
 using namespace std;
 
 typedef struct _max_info{
@@ -75,7 +78,7 @@ void slave_scatter_keys(const int myrank, const unsigned int nel, const unsigned
 void slave_compute_matrix(const int myrank, const unsigned int nel, const unsigned int np, 
 	SIFTs** desc_array, unsigned int local_nel, sim_metric ***matrix_parts, unsigned int *nel_parts);
 	
-void master_compute_map(const unsigned int np, int **map, unsigned int *nel_map);
+void compute_map(const unsigned int np, int **map, unsigned int *nel_map);
 
 void master_compute_matrix(const int myrank, const unsigned int nel, const unsigned int np, 
 	const unsigned int local_nel, SIFTs** desc_array, sim_metric ***matrix_parts, unsigned int *nel_parts);
@@ -212,12 +215,14 @@ void matrix_to_map_index(const int matrix_row, const int matrix_col,
 /*
  * stampa la matrice triangolare globale (master)
  */
-void master_print_global_matrix(sim_metric ***matrix_parts, const int *map,
-		const int nel, const int np);
+void master_print_global_matrix(sim_metric ***matrix_parts,
+		int *map, const int nel, const int np);
 
 /*
  * stampa la matrice triangolare globale (slave)
  */
-void slave_print_global_matrix(const int myrank, sim_metric ***matrix_parts,
-		const int *map, const int nel, const int np);
+void slave_print_global_matrix(const int myrank,
+		sim_metric ***matrix_parts, int *map, const int nel,
+		const int np);
+
 #endif

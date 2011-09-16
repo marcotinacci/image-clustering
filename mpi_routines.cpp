@@ -457,7 +457,7 @@ void slave_scatter_keys(const int myrank, const unsigned int nel,
 	}
 }
 
-void master_compute_map(const unsigned int np, int **map, unsigned int *nel_map)
+void compute_map(const unsigned int np, int **map, unsigned int *nel_map)
 {
 	// inizializza mappa
 	*map = init_matrix_map(np);
@@ -904,12 +904,19 @@ int* receive_mask(int np){
 	return mask;
 }
 
-void master_print_global_matrix(sim_metric ***matrix_parts, const int *map,
-		const int nel, const int np){
+void master_print_global_matrix(sim_metric ***matrix_parts,
+		int *map, const int nel, const int np){
 	MPI_Barrier(MPI_COMM_WORLD);
 	const int q = nel/np;
+	const int r = nel%np;
+
 	for(int row = 0; row < nel; row++){
 		for(int col = 0; col < nel; col++){
+
+			if(row >= col){
+				cout << " -";
+				continue;
+			}
 			int map_row, map_col;
 			int rank;
 			matrix_to_map_index(row, col, nel, &map_row, &map_col, np);
@@ -917,15 +924,22 @@ void master_print_global_matrix(sim_metric ***matrix_parts, const int *map,
 
 			if(rank == 0){
 				// locale
-				int col_shift = q * map_col + (map_col < q ? map_col : q);
-				cout << matrix_parts[map_col][row][col - col_shift];
+				int local_col;
+				if(r == 0){
+					local_col = col - q * map_col;
+				}else{
+					local_col = col - (q * map_col + (MIN(map_col,q)));
+				}
+
+				cout << ' ' << (*matrix_parts)
+						[map_col][row * (MIN(map_col,q)) + local_col];
 			}else{
 				// remoto
 				sim_metric element;
 				MPI_Status state;
-				MPI_Recv(&element, sizeof(sim_metric), MPI_BYTE, rank, TAG_PRINT,
-						MPI_COMM_WORLD, &state);
-				cout << element;
+				MPI_Recv(&element, sizeof(sim_metric), MPI_BYTE, rank,
+						TAG_PRINT, MPI_COMM_WORLD, &state);
+				cout << ' ' << element;
 			}
 		}
 		cout << endl;
@@ -934,19 +948,28 @@ void master_print_global_matrix(sim_metric ***matrix_parts, const int *map,
 	MPI_Barrier(MPI_COMM_WORLD);
 }
 
-void slave_print_global_matrix(const int myrank, sim_metric ***matrix_parts,
-		const int *map, const int nel, const int np){
+void slave_print_global_matrix(const int myrank,
+		sim_metric ***matrix_parts, int *map, const int nel,
+		const int np){
 	MPI_Barrier(MPI_COMM_WORLD);
-	const int q = nel/np;
+	const int q = nel / np;
+	const int r = nel % np;
+
 	for(int row = 0; row < nel; row++){
 		for(int col = 0; col < nel; col++){
+
+			if(row >= col){
+				continue;
+			}
 			int map_row, map_col;
 			int rank;
+
 			matrix_to_map_index(row, col, nel, &map_row, &map_col, np);
 			rank = get_map(map, np, map_row, map_col);
 
 			// cerca solo i valori nelle sezioni del proprio rank
 			if(rank == myrank){
+
 				// il master e' in attesa dell'elemento
 				int index_part;
 				if(map_row == map_col){
@@ -961,16 +984,27 @@ void slave_print_global_matrix(const int myrank, sim_metric ***matrix_parts,
 					cerr << "Errore slave_print_global_matrix: "
 						 <<	"indici mappa errati" << endl;
 				}
-				int row_shift = q * map_row + (map_row < q ? map_row : q);
-				int col_shift = q * map_col + (map_col < q ? map_col : q);
-				sim_metric *val = &matrix_parts
-						[index_part]		// indice parte
-						[row - row_shift]	// indice riga locale
-						[col - col_shift];	// indice colonna locale
+
+				int local_row;
+				int local_col;
+				sim_metric val;
+				if(r == 0){
+					local_col = col - (q * map_col);
+					local_row = row - (q * map_row);
+					val = (*matrix_parts)[index_part][local_row * q + local_col];
+				}else{
+					local_col = col - (q * map_col + (MIN(map_col,q)));
+					local_row = row - (q * map_row + (MIN(map_row,q)));
+					val = (*matrix_parts)[index_part][local_row * (
+							MIN(map_col,q)) + local_col];
+				}
+
 				// spedisci singolo valore
-				MPI_Send((void*)val, sizeof(sim_metric), MPI_BYTE, 0,
+				MPI_Send(&val, sizeof(sim_metric), MPI_BYTE, 0,
 						TAG_PRINT, MPI_COMM_WORLD);
+
 			}
+
 		}
 	}
 	MPI_Barrier(MPI_COMM_WORLD);
