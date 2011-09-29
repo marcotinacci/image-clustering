@@ -1,4 +1,5 @@
-images
+/images
 *.o
 app
 /nbproject/private/
+/images_*
