@@ -121,8 +121,14 @@ void master_clusterize(const max_info &maxinfo, const int *map,
         
         update_mask(mask, maxinfo.rank, maxinfo.index_part, maxinfo.row,
 			maxinfo.col, np);
-        merge_clusters(clusters, maxinfo.col, maxinfo.row);
-        print_clusters(clusters);
+        unsigned int g_row, g_col;
+        printf("\nPARAMETRI GET GLOBAL INDEX: \n rank = %d\n idx_part = %d\n l_row = %d\n l_col = %d\n nel = %d\n np = %d\n", 
+                maxinfo.rank,maxinfo.index_part,maxinfo.row,maxinfo.col,nel,np);
+        get_global_index(maxinfo.rank, np, nel, maxinfo.index_part, maxinfo.row,
+                maxinfo.col, g_row, g_col);
+        
+        merge_clusters(clusters, g_row, g_col);
+        //print_clusters(clusters);
         
 	printf("\ninizia ciclo di terminazione");
 	// invia messaggi di terminazione fase (rank = -1)
@@ -1125,36 +1131,39 @@ void print_global_mask(const int* mask, const int nel, const int np){
 }
 
 void get_global_index(const unsigned int myrank, const unsigned int np, 
-        const unsigned int nel,
-        const unsigned int index_part, unsigned int l_row, 
-        unsigned int l_col, unsigned int &g_row, unsigned int &g_col)
+        const unsigned int nel, const unsigned int index_part, 
+        unsigned int l_row, unsigned int l_col, unsigned int &g_row, 
+        unsigned int &g_col)
 {
     const int q = nel/np;
     const int r = nel%np;
+    const unsigned int np_r = np-r;
+    const unsigned int part = myrank + index_part;
     
-    // swap
-    if(l_row > l_col){
-        unsigned int temp;
-        temp = l_row;
-        l_row = l_col;
-        l_col = l_row;
-    }
-    
-    unsigned int part = myrank + index_part;
+    // calcolo indici di riga e colonna globali
     
     if(part < np){
-        // g_row = part * q + l_row;
-        if(part  < (np-r)){
-            g_col = part * q + l_col;
-            
+        if(myrank < np_r){
+            g_row = myrank * q + l_row;
         }else{
-            g_col = (np-r) * q + (part-np+r) * (q+1) + l_col;
+            g_row = np_r * q + (myrank - np_r) * (q+1) + l_row;
+        }
+        if(part  < np_r){
+            g_col = part * q + l_col;
+        }else{
+            g_col = np_r * q + (part - np_r) * (q+1) + l_col;
         }
     }else{
-        if(myrank < (np-r)){
+        const unsigned int part_np = part - np;
+        if(part_np < np_r){
+            g_row = part_np * q + l_row;
+        }else{
+            g_row = np_r * q + (part_np - np_r) * (q+1) + l_row;
+        }
+        if(myrank < np_r){
             g_col = myrank * q + l_col;
         }else{
-            g_col = (np-r) * q + (myrank+np-r) * (q+1) + l_col;
+            g_col = np_r * q + (myrank + np_r) * (q+1) + l_col;
         }
     }
         

@@ -31,8 +31,8 @@ void test_main_mpi(int argc, char* argv[]){
 		master_scatter_keys(0,nel,np,img_names,&local_nel,&desc_array);
 
 		MPI_Barrier(MPI_COMM_WORLD); // TODO eliminare in deploy
-		cout << "ELABORAZIONE MATRICE DISTANZE" << endl;
-		
+                cout << "ELABORAZIONE MATRICE DISTANZE" << endl;
+                
 		int *map = NULL;
 		unsigned int nel_map = 0;
 		sim_metric **matrix_parts = NULL;
@@ -74,6 +74,7 @@ void test_main_mpi(int argc, char* argv[]){
 		}
                 print_global_mask(mask,nel,np);
                 master_print_global_matrix(&matrix_parts, map, nel, np);
+                print_clusters(clusters);
 		/*
 			TODO 
 				clustering distribuito

@@ -28,7 +28,7 @@
 #define IMG_FOLDER "images"
 #define FILENAME_MAX_LEN 21
 
-#define SKIP_CONVERSION
+//#define SKIP_CONVERSION
 //#define VERBOSE
 
 #define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
@@ -237,15 +237,17 @@ void print_global_mask(const int* mask, const int nel, const int np);
 /*
  * passa da indici locali a indici globali della matrice
  * myrank: rango terminale
+ * np: numero terminali
+ * nel: numero immagini
  * index_part: indice della parte
  * l_row: indice riga locale
  * l_col: indice colonna locale
  * g_row: (output) indice riga globale
  * g_col: (output) indice colonna globale
  */
-void get_global_index(const unsigned int myrank,  const unsigned int np, 
-        const unsigned int index_part,
-        const unsigned int l_row, const unsigned int l_col, unsigned int &g_row,
+void get_global_index(const unsigned int myrank, const unsigned int np, 
+        const unsigned int nel, const unsigned int index_part, 
+        unsigned int l_row, unsigned int l_col, unsigned int &g_row, 
         unsigned int &g_col);
 
 #endif

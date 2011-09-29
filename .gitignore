@@ -1,1 +1,4 @@
 images
+*.o
+app
+/nbproject/private/

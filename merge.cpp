@@ -31,14 +31,14 @@ void merge_dist(sim_metric* dist, int* mask, const unsigned int nel, const unsig
 }
 
 void merge_clusters(cluster* clusters, const unsigned int c1, const unsigned int c2){
-    printf("\nmerge cluster: %d,%d\n",c1,c2);
+        printf("\n MERGE: %d,%d\n",c1,c2);
 	// aggiorna i cluster
-	list<unsigned int> *a_list = &(*clusters)[c1];
-	list<unsigned int> *b_list = &(*clusters)[c2];
+	list<unsigned int> *a_list = &(*clusters)[c2];
+	list<unsigned int> *b_list = &(*clusters)[c1];
 	// aggiungi alla lista a gli elementi della lista b
 	for(list<unsigned int>::iterator it = b_list->begin(); it != b_list->end(); it++){
 		a_list->push_back(*it);		
 	}
 	// elimina la lista b dai clusters
-	clusters->erase(c2);
+	clusters->erase(c1);
 }
