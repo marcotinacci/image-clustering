@@ -4,11 +4,19 @@
     <df name="image-clustering" root=".">
       <df name="images">
       </df>
+      <df name="images_2">
+      </df>
+      <df name="images_3">
+      </df>
       <df name="siftpp">
         <df name="glx">
         </df>
         <df name="mac">
         </df>
+      </df>
+      <df name="temp">
+      </df>
+      <df name="temp">
       </df>
       <in>cluster.cpp</in>
       <in>cluster.h</in>
