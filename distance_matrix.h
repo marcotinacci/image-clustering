@@ -17,7 +17,7 @@ using namespace std;
 /*
  * metrica di misura della similarita'
  */
-typedef unsigned int sim_metric;
+typedef int sim_metric;
 
 // ----------------------------------------------------------------
 // PROTOTIPI

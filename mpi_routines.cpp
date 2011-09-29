@@ -5,6 +5,10 @@ void master_clusterize(const max_info &maxinfo, const int *map,
 		sim_metric ***matrix_parts, const unsigned int matrix_nel,
 		cluster* clusters, int* mask)
 {
+        printf("\nmax_info a inizio clustering");
+        printf("\n<rank, val, row, col, part> : (%d,%d,%d,%d,%d) ",
+                maxinfo.rank,maxinfo.val,maxinfo.row,maxinfo.col, maxinfo.index_part);
+    
 	/*
 		TODO usare una struttura
 	*/
@@ -13,79 +17,119 @@ void master_clusterize(const max_info &maxinfo, const int *map,
 	// info[2]: index part
 	// info[3]: 0 row, 1 column
 	// info[4]: 0 mit, 1 dest
-	unsigned int info1[5], info2[5]; // vettori informazioni
+	unsigned int info_mit[5], info_dest[5]; // vettori informazioni
 	unsigned int i_row, i_col; // coordinate sotto-matrice sulla mappa
 	get_map_index(maxinfo.rank, maxinfo.index_part, np, i_row, i_col);
-	update_mask(mask, maxinfo.rank, maxinfo.index_part, maxinfo.row,
-			maxinfo.col, np);
 	for(unsigned int i = 0; i < np; i++){
 		// elabora i dati da spedire
-		info1[0] = get_map(map, np, i_row, i);
-		info2[0] = get_map(map, np, i, i_col);
-		info1[1] = maxinfo.row;
-		info2[1] = maxinfo.col;
-		info1[2] = get_index_part(info2[0], np, i, i_col);
-		info2[2] = get_index_part(info1[0], np, i_row, i);
-		info1[3] = (i_row < i) ? 1 : 0;
-		info2[3] = (i < i_col) ? 1 : 0;
+		info_mit[0] = get_map(map, np, i_row, i);
+		info_dest[0] = get_map(map, np, i, i_col);
+//                printf("\ninfo1[0] = %d",info_mit[0]);
+//                printf("\ninfo2[0] = %d",info_dest[0]);
+		info_mit[1] = maxinfo.row;
+		info_dest[1] = maxinfo.col;
+//                printf("\ninfo1[1] = %d",info_mit[1]);
+//                printf("\ninfo2[1] = %d",info_dest[1]);
+		info_mit[2] = get_index_part(info_mit[0], np, i_row, i);
+		info_dest[2] = get_index_part(info_dest[0], np, i_col, i);
+//                printf("\ninfo1[2] = %d",info_mit[2]);
+//                printf("\ninfo2[2] = %d",info_dest[2]);
+		info_mit[3] = (i_row < i) ? 0 : 1;
+		info_dest[3] = (i_col < i) ? 0 : 1;
+//                printf("\ninfo1[3] = %d",info_mit[3]);
+//                printf("\ninfo2[3] = %d",info_dest[3]);
 		// la cifra specifica il ruolo di chi riceve le info!
-		info1[4] = 0;
-		info2[4] = 1;
+		info_mit[4] = 0;
+		info_dest[4] = 1;
+//                printf("\ninfo1[4] = %d",info_mit[4]);
+//                printf("\ninfo2[4] = %d",info_dest[4]);
 		#ifdef VERBOSE
-			printf("%d => %d\n", info2[0], info1[0]);
+			printf("%d => %d\n", info_dest[0], info_mit[0]);
 		#endif
 
 		/*
 			TODO usare Isend? gli interleaving sono safe?
 		 */
 		// gestione comunicazione
-		if(info1[0] == 0 && info2[0] == 0){ // master-master
+		if(info_mit[0] == 0 && info_dest[0] == 0){ // master-master
 			#ifdef VERBOSE
-				printf("master-master\n");
+				printf("\nmaster-master");
 			#endif
-			sim_metric *buf = get_local_stripe(0, np, nel, info1,
+			sim_metric *buf = get_local_stripe(0, np, nel, info_mit,
 					*matrix_parts);
+                        printf("\nbuf = [%d,%d,%d]", buf[0],buf[1],buf[2]);
 			// aggiornare elementi locali
 			unsigned int row, col, direction;
-			get_part_dim(0, np, nel, info2[2], row, col);
-			direction = (info2[2] == 0) ? 2 : info2[3];
-			update_local_cluster((*matrix_parts)[info2[2]], buf, info2[1],
+			get_part_dim(0, np, nel, info_dest[2], row, col);
+			direction = (info_dest[2] == 0) ? 2 : info_dest[3];
+			update_local_cluster((*matrix_parts)[info_dest[2]], buf, info_dest[1],
 					row, col, direction);
-		}else if(info1[0] == 0){ // master-slave
+		}else if(info_mit[0] == 0){ // master-slave
 			#ifdef VERBOSE
 				printf("master-slave\n");
 			#endif
-			MPI_Send(info1, 5, MPI_UNSIGNED, info2[0], TAG_CLUSTER_1,
+			MPI_Send(info_mit, 5, MPI_UNSIGNED, info_dest[0], TAG_CLUSTER_1,
 					MPI_COMM_WORLD);
-			sim_metric* buf = recv_stripe(0, np, nel, info2, matrix_parts);
-			// aggiornare elementi locali
-			unsigned int row, col, direction;
-			get_part_dim(0, np, nel, info2[2], row, col);
-			direction = (info2[2] == 0) ? 2 : info2[3];
-			update_local_cluster((*matrix_parts)[info2[2]], buf, info2[1],
-					row, col, direction);
-		}else if(info2[0] == 0){ // slave-master
+			MPI_Send(info_dest, 5, MPI_UNSIGNED, info_dest[0], TAG_CLUSTER_1,
+					MPI_COMM_WORLD);
+                        
+                        send_stripe(0, info_dest[0], np, nel, info_mit, *matrix_parts);
+                        
+//                        sim_metric* buf = recv_stripe(0, np, nel, info2, matrix_parts);
+//                        printf("\nbuf = [%d,%d,%d]", buf[0],buf[1],buf[2]);
+//                        // aggiornare elementi locali
+//                        unsigned int row, col, direction;
+//                        get_part_dim(0, np, nel, info2[2], row, col);
+//                        direction = (info2[2] == 0) ? 2 : info2[3];
+//                        update_local_cluster((*matrix_parts)[info2[2]], buf, info2[1],
+//                                        row, col, direction);
+                        
+		}else if(info_dest[0] == 0){ // slave-master
 			#ifdef VERBOSE
 				printf("slave-master\n");
 			#endif
-			MPI_Send(info2, 5, MPI_UNSIGNED, info1[0], TAG_CLUSTER_1,
+			MPI_Send(info_dest, 5, MPI_UNSIGNED, info_mit[0], TAG_CLUSTER_1,
 					MPI_COMM_WORLD);
-			send_stripe(0, np, nel, info1, *matrix_parts);
+			MPI_Send(info_mit, 5, MPI_UNSIGNED, info_mit[0], TAG_CLUSTER_1,
+					MPI_COMM_WORLD);
+//			send_stripe(0, np, nel, info1, *matrix_parts);
+                        
+                        sim_metric* buf = recv_stripe(0, np, nel, info_mit, matrix_parts);
+                        printf("\nbuf = [%d,%d,%d]", buf[0],buf[1],buf[2]);
+                        // aggiornare elementi locali
+                        unsigned int row, col, direction;
+                        get_part_dim(0, np, nel, info_mit[2], row, col);
+                        direction = (info_mit[2] == 0) ? 2 : info_mit[3];
+                        update_local_cluster((*matrix_parts)[info_mit[2]], buf, info_mit[1],
+                                        row, col, direction);
+                        
 		}else{ // slave-slave
 			#ifdef VERBOSE
 				printf("slave-slave\n");
 			#endif
-			MPI_Send(info1, 5, MPI_UNSIGNED, info2[0], TAG_CLUSTER_1,
+			MPI_Send(info_mit, 5, MPI_UNSIGNED, info_dest[0], TAG_CLUSTER_1,
 					MPI_COMM_WORLD);
-			MPI_Send(info2, 5, MPI_UNSIGNED, info1[0], TAG_CLUSTER_1,
+			MPI_Send(info_dest, 5, MPI_UNSIGNED, info_dest[0], TAG_CLUSTER_1,
+					MPI_COMM_WORLD);
+                        
+			MPI_Send(info_mit, 5, MPI_UNSIGNED, info_mit[0], TAG_CLUSTER_1,
+					MPI_COMM_WORLD);
+			MPI_Send(info_dest, 5, MPI_UNSIGNED, info_mit[0], TAG_CLUSTER_1,
 					MPI_COMM_WORLD);
 		}
 	}
-	printf("inizia ciclo di terminazione\n");
+        
+        update_mask(mask, maxinfo.rank, maxinfo.index_part, maxinfo.row,
+			maxinfo.col, np);
+        merge_clusters(clusters, maxinfo.col, maxinfo.row);
+        print_clusters(clusters);
+        
+	printf("\ninizia ciclo di terminazione");
 	// invia messaggi di terminazione fase (rank = -1)
 	for(unsigned int i = 1; i < np; i++){
-		info1[0] = np;
-		MPI_Send(info1, 5, MPI_UNSIGNED, i, TAG_CLUSTER_1, MPI_COMM_WORLD);
+		info_mit[0] = np;
+		MPI_Send(info_mit, 5, MPI_UNSIGNED, i, TAG_CLUSTER_1, MPI_COMM_WORLD);
+                MPI_Send(info_mit, 5, MPI_UNSIGNED, i, TAG_CLUSTER_1, MPI_COMM_WORLD);
 	}
 
 }
@@ -94,43 +138,53 @@ void slave_clusterize(const unsigned int myrank, const unsigned int nel,
 		const unsigned int np, sim_metric ***matrix_parts,
 		const unsigned int nel_parts)
 {
-	unsigned int info[5];
+	unsigned int info_mit[5], info_dest[5];
 	MPI_Status state;
 	while(true){
 		// ricevi rank mittente/destinatario
-		MPI_Recv(info, 5, MPI_UNSIGNED, 0, TAG_CLUSTER_1, MPI_COMM_WORLD,
+		MPI_Recv(info_mit, 5, MPI_UNSIGNED, 0, TAG_CLUSTER_1, MPI_COMM_WORLD,
 				&state);
-		if(info[0] == np){ // terminare fase
+		MPI_Recv(info_dest, 5, MPI_UNSIGNED, 0, TAG_CLUSTER_1, MPI_COMM_WORLD,
+				&state);
+		if(info_mit[0] == np){ // terminare fase
 			break;
-		}else if(myrank == info[0]){ // eseguire l'aggiornamento in locale
-			unsigned int info2[5];
-			// seconda ricezione
-			MPI_Recv(info2, 5, MPI_UNSIGNED, 0, TAG_CLUSTER_1, MPI_COMM_WORLD,
+		}else if(info_dest[0] == info_mit[0]){ // eseguire l'aggiornamento in locale
+			unsigned int info_mit2[5], info_dest2[5];
+			// seconda ricezione (fittizia, si hanno gia' tutti i dati)
+			MPI_Recv(info_mit2, 5, MPI_UNSIGNED, 0, TAG_CLUSTER_1, MPI_COMM_WORLD,
 					&state);
-			sim_metric *buf = get_local_stripe(0, np, nel, info,
-					*matrix_parts);
+			MPI_Recv(info_dest2, 5, MPI_UNSIGNED, 0, TAG_CLUSTER_1, MPI_COMM_WORLD,
+					&state);
+
+                        sim_metric *buf = get_local_stripe(myrank, np, nel, 
+                                info_mit, *matrix_parts);
+//                        printf("\n mit rank : %d\n mit idx : %d\n mit part : %d\n mit row/col : %d\n mit : %d\n",
+//                                info_mit[0],info_mit[1],info_mit[2],info_mit[3],info_mit[4]);
+//                        printf("\n dest rank : %d\n dest idx : %d\n dest part : %d\n dest row/col : %d\n dest : %d\n",
+//                                info_dest[0],info_dest[1],info_dest[2],info_dest[3],info_dest[4]);
+                        printf("\nbuf = [%d,%d,%d]", buf[0],buf[1],buf[2]);
 			// aggiornare elementi locali
 			unsigned int row, col, direction;
-			get_part_dim(0, np, nel, info2[2], row, col);
-			direction = (info2[2] == 0) ? 2 : info2[3];
-			update_local_cluster((*matrix_parts)[info2[2]], buf, info2[1],
+			get_part_dim(myrank, np, nel, info_dest[2], row, col);
+			direction = (info_dest[2] == 0) ? 2 : info_dest[3];
+			update_local_cluster((*matrix_parts)[info_dest[2]], buf, info_dest[1],
 					row, col, direction);
 		}else{ // comunicare e aggiornare i cluster
 			// TODO scegliere in base al bilanciamento del carico
-			if(info[4] == 1){ // questo slave e' destinatario
-				sim_metric *buf = recv_stripe(myrank, np, nel, info,
+			if(info_dest[0] == myrank){ // questo slave e' destinatario
+				sim_metric *buf = recv_stripe(myrank, np, nel, info_mit,
 						matrix_parts);
-				// TODO fattorizzare
-				// TODO controllare info se e' uguale a info2
+                                printf("\nbuf = [%d,%d,%d]", buf[0],buf[1],buf[2]);
+				
 				// aggiornare elementi locali
 				unsigned int row, col, direction;
-				get_part_dim(0, np, nel, info[2], row, col);
-				direction = (info[2] == 0) ? 2 : info[3];
-				update_local_cluster((*matrix_parts)[info[2]], buf, info[1],
+				get_part_dim(myrank, np, nel, info_dest[2], row, col);
+				direction = (info_dest[2] == 0) ? 2 : info_dest[3];
+				update_local_cluster((*matrix_parts)[info_dest[2]], buf, info_dest[1],
 						row, col, direction);
 				// ---
 			}else{ // questo slave e' mittente
-				send_stripe(myrank, np, nel, info, *matrix_parts);
+                                send_stripe(myrank, info_dest[0], np, nel, info_mit, *matrix_parts);
 			}
 		}
 	}
@@ -146,9 +200,12 @@ void update_local_cluster(sim_metric *part, sim_metric *buf,
 	const unsigned int dim = (direction == 0) ? col : row;
 	switch(direction){
 		case 0: // riga
+                //printf("\naggiorna riga");
 		for(unsigned int i = 0; i < dim; i++){
+                        //printf("\n %d < %d ?", part[index_cluster*col+i],buf[i]);
 			if(part[index_cluster*col+i] < buf[i]){
-				part[index_cluster*col+i] = buf[i];
+                            printf("\n %d -> %d",part[index_cluster*col+i],buf[i]);
+                            part[index_cluster*col+i] = buf[i];
 			}
 		}
 		#ifdef VERBOSE
@@ -156,8 +213,11 @@ void update_local_cluster(sim_metric *part, sim_metric *buf,
 		#endif
 		break;
 		case 1: // colonna
+                //printf("\naggiorna colonna");
 		for(unsigned int i = 0; i < dim; i++){
+                        //printf("\n %d < %d ?", part[index_cluster+col*i],buf[i]);
 			if(part[index_cluster+col*i] < buf[i]){
+                                printf("\n %d -> %d",part[index_cluster+col*i],buf[i]);
 				part[index_cluster+col*i] = buf[i];
 			}
 		}
@@ -166,9 +226,12 @@ void update_local_cluster(sim_metric *part, sim_metric *buf,
 		#endif
 		break;
 		case 2: // triangolare
+                //printf("\naggiorna diagonale");
 		for(unsigned int i = 0; i < dim; i++){
+                        //printf("\n %d < %d ?", get(part,dim,i,index_cluster),buf[i]);
 			if(get(part,dim,i,index_cluster) < buf[i]){
-				buf[i] = get(part,dim,i,index_cluster);
+                                printf("\n %d -> %d",get(part,dim,i,index_cluster),buf[i]);
+                                set(part,dim,i,index_cluster,buf[i]);
 			}
 		}
 		#ifdef VERBOSE
@@ -181,61 +244,64 @@ void update_local_cluster(sim_metric *part, sim_metric *buf,
 	}
 }
 
-void send_stripe(const unsigned int myrank, const unsigned int np,
-		const unsigned int nel, unsigned int * info, sim_metric** matrix_parts)
+void send_stripe(const unsigned int myrank, const unsigned int rank_dest, const unsigned int np,
+		const unsigned int nel, unsigned int * local_info, sim_metric** matrix_parts)
 {
 //	printf("%d (send)info = [%d,%d,%d,%d,%d]\n", myrank, info[0], info[1], info[2], info[3], info[4]);
 	unsigned int row, col, dim;
-	get_part_dim(myrank, np, nel, info[2], row, col);
+	get_part_dim(myrank, np, nel, local_info[2], row, col);
 	// numero dati da spedire
 	// se e' triangolare (info[2] == 0) col e row sono uguali
-	dim = (info[3] == 0) ? col : row;
+	dim = (local_info[3] == 0) ? col : row; // dimensione striscia
 	sim_metric *buf = new sim_metric[dim];
 	// copia gli elementi della sotto-matrice
 	for(unsigned int i = 0; i < dim; i++){
-		if(info[2] == 0){ // triangolare
-			buf[i] = get(matrix_parts[0],dim,i,info[1]);
-		}else if(info[3] == 0){ // riga
-			buf[i] = matrix_parts[info[2]][info[1]*col+i];
-		}else if(info[3] == 1){ // colonna
-			buf[i] = matrix_parts[info[2]][col*i+info[1]];
+		if(local_info[2] == 0){ // triangolare
+			buf[i] = get(matrix_parts[0],dim,i,local_info[1]);
+		}else if(local_info[3] == 0){ // riga
+			buf[i] = matrix_parts[local_info[2]][local_info[1]*col+i];
+		}else if(local_info[3] == 1){ // colonna
+			buf[i] = matrix_parts[local_info[2]][col*i+local_info[1]];
 		}else{
-			cerr << "Errore: codice info[3] = " << info[3] << endl;
+			cerr << "Errore: codice info[3] = " << local_info[3] << endl;
 		}
 	}
 //	printf("%d before send buf\n",myrank);
-	MPI_Send(buf, dim * sizeof(sim_metric), MPI_BYTE, info[0], TAG_CLUSTER_2,
+	MPI_Send(buf, dim * sizeof(sim_metric), MPI_BYTE, rank_dest, TAG_CLUSTER_2,
 			MPI_COMM_WORLD);
 //	printf("%d after send buf\n",myrank);
 }
 
-sim_metric * recv_stripe(const unsigned int myrank, const unsigned int np,
-		const unsigned int nel, unsigned int * info, sim_metric ***matrix_parts)
+sim_metric * recv_stripe(const unsigned int myrank,
+                const unsigned int np, const unsigned int nel, 
+                unsigned int * remote_info, sim_metric ***matrix_parts)
 {
 //	printf("%d (recv)info = [%d,%d,%d,%d,%d]\n", myrank, info[0], info[1], info[2], info[3], info[4]);
 	MPI_Status state;
 	unsigned int row, col, dim;
-	get_part_dim(myrank, np, nel, info[2], row, col);
+	get_part_dim(myrank, np, nel, remote_info[2], row, col);
 	// numero dati da ricevere
-	dim = (info[3] == 0) ? col : row;
+	dim = (remote_info[3] == 0) ? col : row;
 	sim_metric *buf = new sim_metric[dim];
 //	printf("%d before recv buf\n",myrank);
-	MPI_Recv(buf, dim * sizeof(sim_metric), MPI_BYTE, info[0], TAG_CLUSTER_2,
+	MPI_Recv(buf, dim * sizeof(sim_metric), MPI_BYTE, remote_info[0], TAG_CLUSTER_2,
 			MPI_COMM_WORLD, &state);
 //	printf("%d after recv buf\n",myrank);
 	// copia gli elementi della sotto-matrice
-	if(info[2] == 0){ // triangolo
+        /*
+	if(remote_info[2] == 0){ // triangolo
 		for(unsigned int i = 0; i < dim; i++)
-			set((*matrix_parts)[info[2]], dim, info[1], i, buf[i]);
-	}else if(info[3] == 0){ // riga
+			set((*matrix_parts)[remote_info[2]], dim, remote_info[1], i, buf[i]);
+	}else if(remote_info[3] == 0){ // riga
 		for(unsigned int i = 0; i < dim; i++)
-			(*matrix_parts)[info[2]][info[1]*col+i] = buf[i];
-	}else if(info[3] == 1){ // colonna
+			(*matrix_parts)[remote_info[2]][remote_info[1]*col+i] = buf[i];
+	}else if(remote_info[3] == 1){ // colonna
 		for(unsigned int i = 0; i < dim; i++)
-			(*matrix_parts)[info[2]][col*i+info[1]] = buf[i];
+			(*matrix_parts)[remote_info[2]][col*i+remote_info[1]] = buf[i];
 	}else{ // errore
-		cerr << "Errore: valore di info[3] = " << info[3] << endl;
+		cerr << "Errore: valore di info[3] = " << remote_info[3] << endl;
 	}
+        */
 	
 	#ifdef VERBOSE
 		cout << "recv_buf[ ";
@@ -317,17 +383,17 @@ void matrix_to_map_index(const int matrix_row, const int matrix_col,
 	const int r = nel%np;
 
 	// calcola l'indice riga
-	if(matrix_row < r * (q+1)){
-		*map_row = matrix_row / (q+1);
+	if(matrix_row < (np-r) * q){
+		*map_row = matrix_row / q;
 	}else{
-		*map_row = (matrix_row - r*(q+1)) / q;
+		*map_row = (np-r) + (matrix_row - (np-r)*q ) / (q+1);
 	}
 
 	// calcola l'indice colonna
-	if(matrix_col < r * (q+1)){
-		*map_col = matrix_col / (q+1);
+	if(matrix_col < (np-r) * q){
+		*map_col = matrix_col / q;
 	}else{
-		*map_col = (matrix_col - r*(q+1)) / q;
+		*map_col = (np-r) + (matrix_col - (np-r)*q) / (q+1);
 	}
 }
 
@@ -345,7 +411,7 @@ void get_part_dim(const int myrank, const unsigned int np,
 }
 
 void master_max_reduce(max_info * local_max, max_info * global_max,
-		const int myrank, const int np, cluster* clusters, int* mask)
+		const int myrank, const int np, int* mask)
 {
 	max_info *max_vett = new max_info[np];
 	// TODO eseguire con MPI_AllReduce MAX_LOC
@@ -676,8 +742,8 @@ void local_max_reduce(sim_metric** parts, const unsigned int nel_parts,
 				print_submatrix(parts[i], local_nel,
 						get_nel_by_rank(rank2, q, r, np));
 			#endif
-			findlink_quad(parts[i], get_mask_col_quad(mask, myrank, i ,np),
-					local_nel, get_mask_row_quad(mask, myrank, i ,np),
+                        findlink_quad(parts[i], get_mask_row_quad(mask, myrank, i ,np),
+					local_nel, get_mask_col_quad(mask, myrank, i ,np),
 					get_nel_by_rank(rank2, q, r, np), &tmp_c1, &tmp_c2,
 					&tmp_max);
 		}else{
@@ -909,7 +975,7 @@ void master_print_global_matrix(sim_metric ***matrix_parts,
 	MPI_Barrier(MPI_COMM_WORLD);
 	const int q = nel/np;
 	const int r = nel%np;
-
+        cout << endl;
 	for(int row = 0; row < nel; row++){
 		for(int col = 0; col < nel; col++){
 
@@ -927,22 +993,46 @@ void master_print_global_matrix(sim_metric ***matrix_parts,
 				int local_col;
 				if(r == 0){
 					local_col = col - q * map_col;
-				}else{
-					local_col = col - (q * map_col + (MIN(map_col,q)));
+					if(map_col == 0){
+                                            printf(" %d",get((*matrix_parts)[map_col],
+								q, row, local_col));
+						//cout << ' ' << get((*matrix_parts)[map_col],
+						//		q, row, local_col);
+					}else{
+                                            printf(" %d",(*matrix_parts)
+								[map_col][row * q + local_col]);
+					//	cout << ' ' << (*matrix_parts)
+					//			[map_col][row * q + local_col];
+					}
+                                }else{
+					local_col = col - ((q+1) * map_col - (MIN(map_col,np-r)));
+					if(map_col == 0){
+                                            printf(" %d",get((*matrix_parts)[map_col],
+								map_col < np-r ? q : q+1, row, local_col));
+					//	cout << ' ' << get((*matrix_parts)[map_col],
+					//			map_col < np-r ? q : q+1, row, local_col);
+					}else{
+                                            printf(" %d",(*matrix_parts)
+								[map_col]
+								[row * (map_col < np-r ? q : q+1) + local_col]);
+					//	cout << ' ' << (*matrix_parts)
+					//			[map_col]
+					//			[row * (map_col < np-r ? q : q+1) + local_col];
+					}
 				}
 
-				cout << ' ' << (*matrix_parts)
-						[map_col][row * (MIN(map_col,q)) + local_col];
 			}else{
 				// remoto
 				sim_metric element;
 				MPI_Status state;
 				MPI_Recv(&element, sizeof(sim_metric), MPI_BYTE, rank,
 						TAG_PRINT, MPI_COMM_WORLD, &state);
-				cout << ' ' << element;
+                                printf(" %d", element);
+				//cout << ' ' << element;
 			}
 		}
-		cout << endl;
+                printf("\n");
+		//cout << endl;
 	}
 	cout << endl;
 	MPI_Barrier(MPI_COMM_WORLD);
@@ -982,7 +1072,7 @@ void slave_print_global_matrix(const int myrank,
 					// caso non previsto
 					index_part = -1;
 					cerr << "Errore slave_print_global_matrix: "
-						 <<	"indici mappa errati" << endl;
+                                                << "indici mappa errati" << endl;
 				}
 
 				int local_row;
@@ -991,21 +1081,81 @@ void slave_print_global_matrix(const int myrank,
 				if(r == 0){
 					local_col = col - (q * map_col);
 					local_row = row - (q * map_row);
-					val = (*matrix_parts)[index_part][local_row * q + local_col];
+					if(index_part == 0){
+						val = get((*matrix_parts)[index_part], q, local_row ,local_col);
+					}else{
+						val = (*matrix_parts)[index_part][local_row * q + local_col];
+					}
 				}else{
-					local_col = col - (q * map_col + (MIN(map_col,q)));
-					local_row = row - (q * map_row + (MIN(map_row,q)));
-					val = (*matrix_parts)[index_part][local_row * (
-							MIN(map_col,q)) + local_col];
+					local_col = col - ((q+1) * map_col - (MIN(map_col,np-r)));
+					local_row = row - ((q+1) * map_row - (MIN(map_row,np-r)));
+
+					if(index_part == 0){
+						val = get((*matrix_parts)[index_part],
+								(map_col < np-r ? q : q+1), local_row ,local_col);
+					}else{
+						val = (*matrix_parts)
+								[index_part]
+								[local_row * (map_col < np-r ? q : q+1) + local_col];
+					}
 				}
 
 				// spedisci singolo valore
 				MPI_Send(&val, sizeof(sim_metric), MPI_BYTE, 0,
 						TAG_PRINT, MPI_COMM_WORLD);
-
 			}
-
 		}
 	}
 	MPI_Barrier(MPI_COMM_WORLD);
+}
+
+void print_global_mask(const int* mask, const int nel, const int np){
+	const int q = nel/np;
+	const int r = nel%np;
+	cout << endl;
+	for(int i = 0; i < np; i++){
+		const int local_nel = (r == 0) ? q : (i < np-r) ? q : q+1;
+		for(int j = 0; j < local_nel ; j++){
+                    printf("%d",((mask[i] >> j) & 0x01));
+			
+		}
+		printf(" ");
+	}
+	printf("\n");
+}
+
+void get_global_index(const unsigned int myrank, const unsigned int np, 
+        const unsigned int nel,
+        const unsigned int index_part, unsigned int l_row, 
+        unsigned int l_col, unsigned int &g_row, unsigned int &g_col)
+{
+    const int q = nel/np;
+    const int r = nel%np;
+    
+    // swap
+    if(l_row > l_col){
+        unsigned int temp;
+        temp = l_row;
+        l_row = l_col;
+        l_col = l_row;
+    }
+    
+    unsigned int part = myrank + index_part;
+    
+    if(part < np){
+        // g_row = part * q + l_row;
+        if(part  < (np-r)){
+            g_col = part * q + l_col;
+            
+        }else{
+            g_col = (np-r) * q + (part-np+r) * (q+1) + l_col;
+        }
+    }else{
+        if(myrank < (np-r)){
+            g_col = myrank * q + l_col;
+        }else{
+            g_col = (np-r) * q + (myrank+np-r) * (q+1) + l_col;
+        }
+    }
+        
 }

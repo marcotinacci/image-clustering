@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configurationDescriptor version="79">
+  <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
+    <df name="image-clustering" root=".">
+      <df name="images">
+      </df>
+      <df name="images_0">
+      </df>
+      <df name="images_1">
+      </df>
+      <df name="images_2">
+      </df>
+      <df name="images_3">
+      </df>
+      <df name="images_4">
+      </df>
+      <df name="siftpp">
+        <df name="glx">
+        </df>
+        <df name="mac">
+        </df>
+      </df>
+      <df name="temp">
+      </df>
+      <in>cluster.cpp</in>
+      <in>cluster.h</in>
+      <in>clusterize.cpp</in>
+      <in>clusterize.h</in>
+      <in>distance_matrix.cpp</in>
+      <in>distance_matrix.h</in>
+      <in>file_desc.cpp</in>
+      <in>file_desc.h</in>
+      <in>findlink.cpp</in>
+      <in>findlink.h</in>
+      <in>img2key.cpp</in>
+      <in>img2key.h</in>
+      <in>main.cpp</in>
+      <in>mask.cpp</in>
+      <in>mask.h</in>
+      <in>merge.cpp</in>
+      <in>merge.h</in>
+      <in>mpi_routines.cpp</in>
+      <in>mpi_routines.h</in>
+      <in>siftcmp.cpp</in>
+      <in>siftcmp.h</in>
+      <in>siftget.cpp</in>
+      <in>siftget.h</in>
+      <in>tests.cpp</in>
+      <in>tests.h</in>
+    </df>
+    <logicalFolder name="ExternalFiles"
+                   displayName="Important Files"
+                   projectFiles="false"
+                   kind="IMPORTANT_FILES_FOLDER">
+      <itemPath>Makefile</itemPath>
+    </logicalFolder>
+  </logicalFolder>
+  <sourceFolderFilter>^(nbproject)$</sourceFolderFilter>
+  <sourceRootList>
+    <Elem>.</Elem>
+  </sourceRootList>
+  <projectmakefile>Makefile</projectmakefile>
+  <confs>
+    <conf name="Default" type="0">
+      <toolsSet>
+        <remote-sources-mode>LOCAL_SOURCES</remote-sources-mode>
+        <compilerSet>default</compilerSet>
+      </toolsSet>
+      <makefileType>
+        <makeTool>
+          <buildCommandWorkingDir>.</buildCommandWorkingDir>
+          <buildCommand>${MAKE} -f Makefile</buildCommand>
+          <cleanCommand>${MAKE} -f Makefile clean</cleanCommand>
+          <executablePath></executablePath>
+          <ccTool>
+            <preprocessorList>
+              <Elem>_OPENMP=200505</Elem>
+            </preprocessorList>
+          </ccTool>
+        </makeTool>
+      </makefileType>
+    </conf>
+    <conf name="MPI" type="0">
+      <toolsSet>
+        <remote-sources-mode>LOCAL_SOURCES</remote-sources-mode>
+        <compilerSet>default</compilerSet>
+      </toolsSet>
+      <makefileType>
+        <makeTool>
+          <buildCommandWorkingDir>.</buildCommandWorkingDir>
+          <buildCommand>${MAKE} -f Makefile</buildCommand>
+          <cleanCommand>${MAKE} -f Makefile clean</cleanCommand>
+          <executablePath></executablePath>
+          <ccTool>
+            <preprocessorList>
+              <Elem>_OPENMP=200505</Elem>
+            </preprocessorList>
+          </ccTool>
+        </makeTool>
+      </makefileType>
+    </conf>
+  </confs>
+</configurationDescriptor>

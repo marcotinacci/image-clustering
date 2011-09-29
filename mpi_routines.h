@@ -15,14 +15,15 @@
 #include "findlink.h"
 #include "mask.h"
 #include "cluster.h"
+#include "merge.h"
 
 #define TAG_DISTRIB_IMGS 		1
 #define TAG_TRANSFER_INFO 		2
-#define TAG_ARRAY_NEL_DISTS 	3
+#define TAG_ARRAY_NEL_DISTS             3
 #define TAG_ARRAY_SIFT			4
 #define TAG_CLUSTER_1 			5
 #define TAG_CLUSTER_2 			6
-#define TAG_PRINT				7
+#define TAG_PRINT			7
 #define IMG_MAX_LEN 350000
 #define IMG_FOLDER "images"
 #define FILENAME_MAX_LEN 21
@@ -52,19 +53,19 @@ void master_clusterize(const max_info &maxinfo, const int *map,
 		sim_metric ***matrix_parts, const unsigned int matrix_nel,
 		cluster* clusters, int* mask);
 
-void send_stripe(const unsigned int myrank, const unsigned int np,
-		const unsigned int nel, unsigned int * info,
-		sim_metric** matrix_parts);
-	
-sim_metric * recv_stripe(const unsigned int myrank, const unsigned int np,
-		const unsigned int nel, unsigned int * info,
-		sim_metric ***matrix_parts);
+void send_stripe(const unsigned int myrank, const unsigned int rank_dest, 
+                const unsigned int np, const unsigned int nel, 
+                unsigned int * local_info, sim_metric** matrix_parts);
+
+sim_metric * recv_stripe(const unsigned int myrank,
+                const unsigned int np, const unsigned int nel, 
+                unsigned int * remote_info, sim_metric ***matrix_parts);
 
 sim_metric * get_local_stripe(const unsigned int myrank, const unsigned int np,
 		const unsigned int nel, unsigned int * info, sim_metric **matrix_parts);
 
 void master_max_reduce(max_info * local_max, max_info * global_max,
-		const int myrank, const int np, cluster* clusters, int* mask);
+		const int myrank, const int np, int* mask);
 
 void slave_max_reduce(max_info * local_max);
 
@@ -224,5 +225,27 @@ void master_print_global_matrix(sim_metric ***matrix_parts,
 void slave_print_global_matrix(const int myrank,
 		sim_metric ***matrix_parts, int *map, const int nel,
 		const int np);
+
+/*
+ * stampa il vettore di maschera globale
+ * mask: vettore maschera
+ * nel: numero immagini
+ * np: numero terminali
+ */
+void print_global_mask(const int* mask, const int nel, const int np);
+
+/*
+ * passa da indici locali a indici globali della matrice
+ * myrank: rango terminale
+ * index_part: indice della parte
+ * l_row: indice riga locale
+ * l_col: indice colonna locale
+ * g_row: (output) indice riga globale
+ * g_col: (output) indice colonna globale
+ */
+void get_global_index(const unsigned int myrank,  const unsigned int np, 
+        const unsigned int index_part,
+        const unsigned int l_row, const unsigned int l_col, unsigned int &g_row,
+        unsigned int &g_col);
 
 #endif

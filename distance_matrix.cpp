@@ -26,7 +26,7 @@ void set(sim_metric* dist, const unsigned int nel, const unsigned int row,
 sim_metric get(const sim_metric* dist, const unsigned int nel, 
 		const unsigned int row, const unsigned int col)
 {
-	// gli elementi diagonali sono sempre 0 nella matrice delle distanze
+	// gli elementi diagonali sono sempre +inf nella matrice delle distanze
 	if(row == col) return UINT_MAX;
 	if(row > col){
 		return dist[(nel-2)*col - (col-1)*col/2 + row -1];		

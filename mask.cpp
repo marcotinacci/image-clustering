@@ -44,8 +44,7 @@ void update_mask(int *mask, const int rank, const int index_part,
 		idx_col = index-np;
 	}
 	// disattiva gli indici sulla maschera
-	mask[idx_row] &= ~(0x01 << local_col);
+	//mask[idx_row] &= ~(0x01 << local_col);
 	mask[idx_col] &= ~(0x01 << local_row);
 }
-
 
