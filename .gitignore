@@ -3,3 +3,6 @@
 app
 /nbproject/private/
 /images_*
+nbproject/private/private.xml
+
+nbproject/private/configurations.xml
