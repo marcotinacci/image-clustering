@@ -5,7 +5,9 @@ void test_main_mpi(int argc, char* argv[]){
 	int np, myrank;
 	string* img_names;
 	ostringstream oss;
-
+        
+        
+        
 	MPI_Init(&argc, &argv);
 	MPI_Comm_size(MPI_COMM_WORLD, &np);
 	MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
@@ -76,10 +78,12 @@ void test_main_mpi(int argc, char* argv[]){
                 master_print_global_matrix(&matrix_parts, map, nel, np);
                 print_clusters(clusters);
 		/*
-			TODO 
-				clustering distribuito
-				scrittura del file html di output
+                TODO scrittura del file html di output
 		*/
+                
+                print_results(clusters,img_names);
+                
+                
 		// distruggi i cluster
 		destroy_cluster(clusters);
 

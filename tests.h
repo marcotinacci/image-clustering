@@ -16,6 +16,7 @@
 #include "img2key.h"
 #include "mpi_routines.h"
 #include "mask.h"
+#include "print_results.h"
 
 using namespace std;
 

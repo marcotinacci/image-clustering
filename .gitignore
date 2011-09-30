@@ -1,8 +1,13 @@
 /images
-*.o
-app
-/nbproject/private/
+
+/*.o
+
+/app
+
+/nbproject/private/*
+
 /images_*
-nbproject/private/private.xml
+
+output.html
 
 nbproject/private/configurations.xml
