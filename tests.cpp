@@ -6,8 +6,6 @@ void test_main_mpi(int argc, char* argv[]){
 	string* img_names;
 	ostringstream oss;
         
-        
-        
 	MPI_Init(&argc, &argv);
 	MPI_Comm_size(MPI_COMM_WORLD, &np);
 	MPI_Comm_rank(MPI_COMM_WORLD, &myrank);

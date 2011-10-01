@@ -46,11 +46,11 @@ string get_cluster_gallery(cluster* clusters, string* img_names){
             
             gallery << "<td><img src=\"" << img_names[(*itl)] 
                     << "\" width=\"200px\"></td>" << endl;
-            if(j % GALLERY_COLS == 0 && j != 0) gallery << "</tr>" << endl;
+            if(j % GALLERY_COLS == 0) gallery << "</tr>" << endl;
         }
         // chiusura tabella
         while(j % GALLERY_COLS != 0){
-            gallery << "<td></td>" << endl;
+            gallery << "<td width=\"200px\"></td>" << endl;
             j++;
             if(j % GALLERY_COLS == 0) gallery << "</tr>" << endl;
         }

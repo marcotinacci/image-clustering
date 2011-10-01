@@ -2,13 +2,36 @@
 <configurationDescriptor version="79">
   <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
     <df name="image-clustering" root=".">
+      <df name="_images">
+        <in>1557415021.jpg</in>
+        <in>1557415839.jpg</in>
+        <in>1557418343.jpg</in>
+        <in>1557419009.jpg</in>
+        <in>1558291130.jpg</in>
+        <in>1558294114.jpg</in>
+        <in>2882052958.jpg</in>
+        <in>2882058372.jpg</in>
+        <in>2883792995.jpg</in>
+      </df>
       <df name="images">
+      </df>
+      <df name="images_0">
+        <in>img_0.jpg</in>
+        <in>img_0.jpg.pgm</in>
+      </df>
+      <df name="images_1">
+        <in>img_0.jpg</in>
+      </df>
+      <df name="images_2">
+        <in>img_0.jpg</in>
       </df>
       <df name="siftpp">
         <df name="glx">
         </df>
         <df name="mac">
         </df>
+      </df>
+      <df name="temp">
       </df>
       <in>cluster.cpp</in>
       <in>cluster.h</in>
@@ -29,6 +52,8 @@
       <in>merge.h</in>
       <in>mpi_routines.cpp</in>
       <in>mpi_routines.h</in>
+      <in>print_results.cpp</in>
+      <in>print_results.h</in>
       <in>siftcmp.cpp</in>
       <in>siftcmp.h</in>
       <in>siftget.cpp</in>

@@ -209,7 +209,7 @@ void update_local_cluster(sim_metric *part, sim_metric *buf,
                 //printf("\naggiorna riga");
 		for(unsigned int i = 0; i < dim; i++){
                         //printf("\n %d < %d ?", part[index_cluster*col+i],buf[i]);
-			if(part[index_cluster*col+i] < buf[i]){
+			if(part[index_cluster*col+i] > buf[i]){
                             printf("\n %d -> %d",part[index_cluster*col+i],buf[i]);
                             part[index_cluster*col+i] = buf[i];
 			}
@@ -222,7 +222,7 @@ void update_local_cluster(sim_metric *part, sim_metric *buf,
                 //printf("\naggiorna colonna");
 		for(unsigned int i = 0; i < dim; i++){
                         //printf("\n %d < %d ?", part[index_cluster+col*i],buf[i]);
-			if(part[index_cluster+col*i] < buf[i]){
+			if(part[index_cluster+col*i] > buf[i]){
                                 printf("\n %d -> %d",part[index_cluster+col*i],buf[i]);
 				part[index_cluster+col*i] = buf[i];
 			}
@@ -233,7 +233,7 @@ void update_local_cluster(sim_metric *part, sim_metric *buf,
 		break;
 		case 2: // triangolare
                 //printf("\naggiorna diagonale");
-		for(unsigned int i = 0; i < dim; i++){
+		for(unsigned int i = 0; i > dim; i++){
                         //printf("\n %d < %d ?", get(part,dim,i,index_cluster),buf[i]);
 			if(get(part,dim,i,index_cluster) < buf[i]){
                                 printf("\n %d -> %d",get(part,dim,i,index_cluster),buf[i]);
