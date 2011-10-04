@@ -22,6 +22,9 @@ using namespace std;
 
 #define NUM_CLUSTERS 4
 #define DEBUG
+//#define DBG_MASK
+//#define DBG_MATRIX
+//#define DBG_CLUSTERS
 
 /*
  * test globale

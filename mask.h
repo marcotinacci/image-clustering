@@ -7,6 +7,12 @@
 int* init_mask(const int np);
 
 /*
+ * distruttore maschera
+ */
+
+void destroy_mask(int* mask);
+
+/*
  * restituisce la porzione di maschera della sotto matrice triangolare
  * specificata dal rango
  */

@@ -5,9 +5,6 @@ void master_clusterize(const max_info &maxinfo, const int *map,
 		sim_metric ***matrix_parts, const unsigned int matrix_nel,
 		cluster* clusters, int* mask)
 {
-        printf("\nmax_info a inizio clustering");
-        printf("\n<rank, val, row, col, part> : (%d,%d,%d,%d,%d) ",
-                maxinfo.rank,maxinfo.val,maxinfo.row,maxinfo.col, maxinfo.index_part);
     
 	/*
 		TODO usare una struttura
@@ -24,40 +21,23 @@ void master_clusterize(const max_info &maxinfo, const int *map,
 		// elabora i dati da spedire
 		info_mit[0] = get_map(map, np, i_row, i);
 		info_dest[0] = get_map(map, np, i, i_col);
-//                printf("\ninfo1[0] = %d",info_mit[0]);
-//                printf("\ninfo2[0] = %d",info_dest[0]);
 		info_mit[1] = maxinfo.row;
 		info_dest[1] = maxinfo.col;
-//                printf("\ninfo1[1] = %d",info_mit[1]);
-//                printf("\ninfo2[1] = %d",info_dest[1]);
 		info_mit[2] = get_index_part(info_mit[0], np, i_row, i);
 		info_dest[2] = get_index_part(info_dest[0], np, i_col, i);
-//                printf("\ninfo1[2] = %d",info_mit[2]);
-//                printf("\ninfo2[2] = %d",info_dest[2]);
 		info_mit[3] = (i_row < i) ? 0 : 1;
 		info_dest[3] = (i_col < i) ? 0 : 1;
-//                printf("\ninfo1[3] = %d",info_mit[3]);
-//                printf("\ninfo2[3] = %d",info_dest[3]);
 		// la cifra specifica il ruolo di chi riceve le info!
 		info_mit[4] = 0;
 		info_dest[4] = 1;
-//                printf("\ninfo1[4] = %d",info_mit[4]);
-//                printf("\ninfo2[4] = %d",info_dest[4]);
-		#ifdef VERBOSE
-			printf("%d => %d\n", info_dest[0], info_mit[0]);
-		#endif
 
 		/*
 			TODO usare Isend? gli interleaving sono safe?
 		 */
 		// gestione comunicazione
 		if(info_mit[0] == 0 && info_dest[0] == 0){ // master-master
-			#ifdef VERBOSE
-				printf("\nmaster-master");
-			#endif
 			sim_metric *buf = get_local_stripe(0, np, nel, info_mit,
 					*matrix_parts);
-                        printf("\nbuf = [%d,%d,%d]", buf[0],buf[1],buf[2]);
 			// aggiornare elementi locali
 			unsigned int row, col, direction;
 			get_part_dim(0, np, nel, info_dest[2], row, col);
@@ -65,9 +45,7 @@ void master_clusterize(const max_info &maxinfo, const int *map,
 			update_local_cluster((*matrix_parts)[info_dest[2]], buf, info_dest[1],
 					row, col, direction);
 		}else if(info_mit[0] == 0){ // master-slave
-			#ifdef VERBOSE
-				printf("master-slave\n");
-			#endif
+
 			MPI_Send(info_mit, 5, MPI_UNSIGNED, info_dest[0], TAG_CLUSTER_1,
 					MPI_COMM_WORLD);
 			MPI_Send(info_dest, 5, MPI_UNSIGNED, info_dest[0], TAG_CLUSTER_1,
@@ -75,19 +53,7 @@ void master_clusterize(const max_info &maxinfo, const int *map,
                         
                         send_stripe(0, info_dest[0], np, nel, info_mit, *matrix_parts);
                         
-//                        sim_metric* buf = recv_stripe(0, np, nel, info2, matrix_parts);
-//                        printf("\nbuf = [%d,%d,%d]", buf[0],buf[1],buf[2]);
-//                        // aggiornare elementi locali
-//                        unsigned int row, col, direction;
-//                        get_part_dim(0, np, nel, info2[2], row, col);
-//                        direction = (info2[2] == 0) ? 2 : info2[3];
-//                        update_local_cluster((*matrix_parts)[info2[2]], buf, info2[1],
-//                                        row, col, direction);
-                        
 		}else if(info_dest[0] == 0){ // slave-master
-			#ifdef VERBOSE
-				printf("slave-master\n");
-			#endif
 			MPI_Send(info_dest, 5, MPI_UNSIGNED, info_mit[0], TAG_CLUSTER_1,
 					MPI_COMM_WORLD);
 			MPI_Send(info_mit, 5, MPI_UNSIGNED, info_mit[0], TAG_CLUSTER_1,
@@ -95,7 +61,6 @@ void master_clusterize(const max_info &maxinfo, const int *map,
 //			send_stripe(0, np, nel, info1, *matrix_parts);
                         
                         sim_metric* buf = recv_stripe(0, np, nel, info_mit, matrix_parts);
-                        printf("\nbuf = [%d,%d,%d]", buf[0],buf[1],buf[2]);
                         // aggiornare elementi locali
                         unsigned int row, col, direction;
                         get_part_dim(0, np, nel, info_mit[2], row, col);
@@ -104,9 +69,6 @@ void master_clusterize(const max_info &maxinfo, const int *map,
                                         row, col, direction);
                         
 		}else{ // slave-slave
-			#ifdef VERBOSE
-				printf("slave-slave\n");
-			#endif
 			MPI_Send(info_mit, 5, MPI_UNSIGNED, info_dest[0], TAG_CLUSTER_1,
 					MPI_COMM_WORLD);
 			MPI_Send(info_dest, 5, MPI_UNSIGNED, info_dest[0], TAG_CLUSTER_1,
@@ -122,15 +84,12 @@ void master_clusterize(const max_info &maxinfo, const int *map,
         update_mask(mask, maxinfo.rank, maxinfo.index_part, maxinfo.row,
 			maxinfo.col, np);
         unsigned int g_row, g_col;
-        printf("\nPARAMETRI GET GLOBAL INDEX: \n rank = %d\n idx_part = %d\n l_row = %d\n l_col = %d\n nel = %d\n np = %d\n", 
-                maxinfo.rank,maxinfo.index_part,maxinfo.row,maxinfo.col,nel,np);
+
         get_global_index(maxinfo.rank, np, nel, maxinfo.index_part, maxinfo.row,
                 maxinfo.col, g_row, g_col);
         
         merge_clusters(clusters, g_row, g_col);
-        //print_clusters(clusters);
         
-	printf("\ninizia ciclo di terminazione");
 	// invia messaggi di terminazione fase (rank = -1)
 	for(unsigned int i = 1; i < np; i++){
 		info_mit[0] = np;
@@ -164,11 +123,7 @@ void slave_clusterize(const unsigned int myrank, const unsigned int nel,
 
                         sim_metric *buf = get_local_stripe(myrank, np, nel, 
                                 info_mit, *matrix_parts);
-//                        printf("\n mit rank : %d\n mit idx : %d\n mit part : %d\n mit row/col : %d\n mit : %d\n",
-//                                info_mit[0],info_mit[1],info_mit[2],info_mit[3],info_mit[4]);
-//                        printf("\n dest rank : %d\n dest idx : %d\n dest part : %d\n dest row/col : %d\n dest : %d\n",
-//                                info_dest[0],info_dest[1],info_dest[2],info_dest[3],info_dest[4]);
-                        printf("\nbuf = [%d,%d,%d]", buf[0],buf[1],buf[2]);
+
 			// aggiornare elementi locali
 			unsigned int row, col, direction;
 			get_part_dim(myrank, np, nel, info_dest[2], row, col);
@@ -180,7 +135,6 @@ void slave_clusterize(const unsigned int myrank, const unsigned int nel,
 			if(info_dest[0] == myrank){ // questo slave e' destinatario
 				sim_metric *buf = recv_stripe(myrank, np, nel, info_mit,
 						matrix_parts);
-                                printf("\nbuf = [%d,%d,%d]", buf[0],buf[1],buf[2]);
 				
 				// aggiornare elementi locali
 				unsigned int row, col, direction;
@@ -188,7 +142,6 @@ void slave_clusterize(const unsigned int myrank, const unsigned int nel,
 				direction = (info_dest[2] == 0) ? 2 : info_dest[3];
 				update_local_cluster((*matrix_parts)[info_dest[2]], buf, info_dest[1],
 						row, col, direction);
-				// ---
 			}else{ // questo slave e' mittente
                                 send_stripe(myrank, info_dest[0], np, nel, info_mit, *matrix_parts);
 			}
@@ -206,43 +159,25 @@ void update_local_cluster(sim_metric *part, sim_metric *buf,
 	const unsigned int dim = (direction == 0) ? col : row;
 	switch(direction){
 		case 0: // riga
-                //printf("\naggiorna riga");
 		for(unsigned int i = 0; i < dim; i++){
-                        //printf("\n %d < %d ?", part[index_cluster*col+i],buf[i]);
 			if(part[index_cluster*col+i] > buf[i]){
-                            printf("\n %d -> %d",part[index_cluster*col+i],buf[i]);
                             part[index_cluster*col+i] = buf[i];
 			}
 		}
-		#ifdef VERBOSE
-			print_submatrix(part, row, col);
-		#endif
 		break;
 		case 1: // colonna
-                //printf("\naggiorna colonna");
 		for(unsigned int i = 0; i < dim; i++){
-                        //printf("\n %d < %d ?", part[index_cluster+col*i],buf[i]);
 			if(part[index_cluster+col*i] > buf[i]){
-                                printf("\n %d -> %d",part[index_cluster+col*i],buf[i]);
 				part[index_cluster+col*i] = buf[i];
 			}
 		}
-		#ifdef VERBOSE
-			print_submatrix(part, row, col);
-		#endif
 		break;
 		case 2: // triangolare
-                //printf("\naggiorna diagonale");
 		for(unsigned int i = 0; i > dim; i++){
-                        //printf("\n %d < %d ?", get(part,dim,i,index_cluster),buf[i]);
-			if(get(part,dim,i,index_cluster) < buf[i]){
-                                printf("\n %d -> %d",get(part,dim,i,index_cluster),buf[i]);
+			if(get(part,dim,i,index_cluster) > buf[i]){
                                 set(part,dim,i,index_cluster,buf[i]);
 			}
 		}
-		#ifdef VERBOSE
-			print_matrix(part, dim);
-		#endif
 		break;
 		default:
 			cerr << "Errore: codice direction = " << direction << endl;
@@ -253,7 +188,6 @@ void update_local_cluster(sim_metric *part, sim_metric *buf,
 void send_stripe(const unsigned int myrank, const unsigned int rank_dest, const unsigned int np,
 		const unsigned int nel, unsigned int * local_info, sim_metric** matrix_parts)
 {
-//	printf("%d (send)info = [%d,%d,%d,%d,%d]\n", myrank, info[0], info[1], info[2], info[3], info[4]);
 	unsigned int row, col, dim;
 	get_part_dim(myrank, np, nel, local_info[2], row, col);
 	// numero dati da spedire
@@ -272,51 +206,22 @@ void send_stripe(const unsigned int myrank, const unsigned int rank_dest, const 
 			cerr << "Errore: codice info[3] = " << local_info[3] << endl;
 		}
 	}
-//	printf("%d before send buf\n",myrank);
 	MPI_Send(buf, dim * sizeof(sim_metric), MPI_BYTE, rank_dest, TAG_CLUSTER_2,
 			MPI_COMM_WORLD);
-//	printf("%d after send buf\n",myrank);
 }
 
 sim_metric * recv_stripe(const unsigned int myrank,
                 const unsigned int np, const unsigned int nel, 
                 unsigned int * remote_info, sim_metric ***matrix_parts)
 {
-//	printf("%d (recv)info = [%d,%d,%d,%d,%d]\n", myrank, info[0], info[1], info[2], info[3], info[4]);
 	MPI_Status state;
 	unsigned int row, col, dim;
 	get_part_dim(myrank, np, nel, remote_info[2], row, col);
 	// numero dati da ricevere
 	dim = (remote_info[3] == 0) ? col : row;
 	sim_metric *buf = new sim_metric[dim];
-//	printf("%d before recv buf\n",myrank);
 	MPI_Recv(buf, dim * sizeof(sim_metric), MPI_BYTE, remote_info[0], TAG_CLUSTER_2,
 			MPI_COMM_WORLD, &state);
-//	printf("%d after recv buf\n",myrank);
-	// copia gli elementi della sotto-matrice
-        /*
-	if(remote_info[2] == 0){ // triangolo
-		for(unsigned int i = 0; i < dim; i++)
-			set((*matrix_parts)[remote_info[2]], dim, remote_info[1], i, buf[i]);
-	}else if(remote_info[3] == 0){ // riga
-		for(unsigned int i = 0; i < dim; i++)
-			(*matrix_parts)[remote_info[2]][remote_info[1]*col+i] = buf[i];
-	}else if(remote_info[3] == 1){ // colonna
-		for(unsigned int i = 0; i < dim; i++)
-			(*matrix_parts)[remote_info[2]][col*i+remote_info[1]] = buf[i];
-	}else{ // errore
-		cerr << "Errore: valore di info[3] = " << remote_info[3] << endl;
-	}
-        */
-	
-	#ifdef VERBOSE
-		cout << "recv_buf[ ";
-		for(unsigned int i = 0; i < dim; i++)
-		{
-			cout << buf[i] << ' ';
-		}
-		cout << "]" << endl;
-	#endif
 	return buf;
 }
 
@@ -341,16 +246,6 @@ sim_metric * get_local_stripe(const unsigned int myrank, const unsigned int np,
 			cerr << "Errore: codice info[3] = " << info[3] << endl;
 		}
 	}
-
-	// DEBUG
-/*
-	cout << "local_stripe[ ";
-	for(unsigned int i = 0; i < dim; i++)
-	{
-		cout << buf[i] << ' ';
-	}
-	cout << "]" << endl;
-*/
 	return buf;
 }
 
@@ -424,16 +319,6 @@ void master_max_reduce(max_info * local_max, max_info * global_max,
 	MPI_Gather(local_max, sizeof(max_info), MPI_BYTE, max_vett,
 			sizeof(max_info), MPI_BYTE, myrank, MPI_COMM_WORLD);
 
-	#ifdef VERBOSE
-		printf("<rank, val, row, col, part> : {");
-		for(int i = 0; i < np; i++)
-		{
-			printf("(%d,%d,%d,%d,%d) ",max_vett[i].rank,max_vett[i].val,
-					max_vett[i].row,max_vett[i].col, max_vett[i].index_part);
-		}
-		printf("}\n");
-	#endif
-
 	unsigned int i_max = 0;
 	for(int i = 1; i < np; i++){
 		if(max_vett[i].val > max_vett[i_max].val){
@@ -446,7 +331,6 @@ void master_max_reduce(max_info * local_max, max_info * global_max,
 }
 
 void slave_max_reduce(max_info * local_max){
-//	printf("local max slave (%d,%d,%d,%d,%d)\n",local_max->rank, local_max->val, local_max->row, local_max->col, local_max->index_part);
 	MPI_Gather(local_max, sizeof(max_info), MPI_BYTE, NULL, 0,
 			MPI_DATATYPE_NULL, 0, MPI_COMM_WORLD);
 }
@@ -729,50 +613,29 @@ void local_max_reduce(sim_metric** parts, const unsigned int nel_parts,
 	// prima sotto-matrice triangolare
 	findlink_tri(parts[0], get_mask_part_tri(mask, myrank), local_nel, &c1, &c2,
 			&max);
-	#ifdef VERBOSE
-		cout << "- reduced matrix of " << myrank << endl;
-		print_matrix(parts[0], local_nel);
-	#endif
-//	printf("local max = (%d,%d) index = %d/%d\n", c1, c2, 0, nel_parts);
 	// successive sotto-matrici quadrate
 	for(unsigned int i = 1; i < nel_parts + 1; i++){
 		// rango della seconda coordinata
 		int rank2 = (myrank + i) % np;
 		unsigned int tmp_c1, tmp_c2;
 		sim_metric tmp_max;
-		#ifdef VERBOSE
-			cout << "- reduced quad matrix of " << myrank << endl;
-		#endif
 		if(myrank < rank2){
-			#ifdef VERBOSE
-				print_submatrix(parts[i], local_nel,
-						get_nel_by_rank(rank2, q, r, np));
-			#endif
                         findlink_quad(parts[i], get_mask_row_quad(mask, myrank, i ,np),
 					local_nel, get_mask_col_quad(mask, myrank, i ,np),
 					get_nel_by_rank(rank2, q, r, np), &tmp_c1, &tmp_c2,
 					&tmp_max);
 		}else{
-			#ifdef VERBOSE
-				print_submatrix(parts[i], get_nel_by_rank(rank2, q, r, np),
-						local_nel);
-			#endif
 			findlink_quad(parts[i], get_mask_row_quad(mask, myrank, i ,np),
 					get_nel_by_rank(rank2, q, r, np),
 					get_mask_col_quad(mask, myrank, i ,np), local_nel, &tmp_c1,
 					&tmp_c2, &tmp_max);
 		}
-//		printf("local max = (%d,%d) index = %d/%d\n", tmp_c1, tmp_c2,i,nel_parts);
 
 		if(tmp_max > max){
 			max = tmp_max;
 			index_part = i;
 			c1 = tmp_c1;
 			c2 = tmp_c2;
-			#ifdef VERBOSE
-				printf("update max = %d, index = %d (%d,%d)\n", max, index_part,
-						c1, c2);
-			#endif
 		}
 	}
 	maxinf->rank = myrank;
@@ -823,10 +686,6 @@ SIFTs** get_array_desc(unsigned char* array_sift, unsigned int* array_nel, unsig
 	}
 	return array_desc;
 }
-
-/*
-	TODO implementare la matrice template per distanze e mappatura
-*/
 
 int* init_matrix_map(const int np){
  	return new int[np*(np-1)/2];
@@ -1002,28 +861,19 @@ void master_print_global_matrix(sim_metric ***matrix_parts,
 					if(map_col == 0){
                                             printf(" %d",get((*matrix_parts)[map_col],
 								q, row, local_col));
-						//cout << ' ' << get((*matrix_parts)[map_col],
-						//		q, row, local_col);
 					}else{
                                             printf(" %d",(*matrix_parts)
 								[map_col][row * q + local_col]);
-					//	cout << ' ' << (*matrix_parts)
-					//			[map_col][row * q + local_col];
 					}
                                 }else{
 					local_col = col - ((q+1) * map_col - (MIN(map_col,np-r)));
 					if(map_col == 0){
                                             printf(" %d",get((*matrix_parts)[map_col],
 								map_col < np-r ? q : q+1, row, local_col));
-					//	cout << ' ' << get((*matrix_parts)[map_col],
-					//			map_col < np-r ? q : q+1, row, local_col);
 					}else{
                                             printf(" %d",(*matrix_parts)
 								[map_col]
 								[row * (map_col < np-r ? q : q+1) + local_col]);
-					//	cout << ' ' << (*matrix_parts)
-					//			[map_col]
-					//			[row * (map_col < np-r ? q : q+1) + local_col];
 					}
 				}
 
@@ -1034,11 +884,9 @@ void master_print_global_matrix(sim_metric ***matrix_parts,
 				MPI_Recv(&element, sizeof(sim_metric), MPI_BYTE, rank,
 						TAG_PRINT, MPI_COMM_WORLD, &state);
                                 printf(" %d", element);
-				//cout << ' ' << element;
 			}
 		}
                 printf("\n");
-		//cout << endl;
 	}
 	cout << endl;
 	MPI_Barrier(MPI_COMM_WORLD);
@@ -1163,7 +1011,7 @@ void get_global_index(const unsigned int myrank, const unsigned int np,
         if(myrank < np_r){
             g_col = myrank * q + l_col;
         }else{
-            g_col = np_r * q + (myrank + np_r) * (q+1) + l_col;
+            g_col = np_r * q + (myrank - np_r) * (q+1) + l_col;
         }
     }
         

@@ -41,8 +41,7 @@ void findlink_tri(const sim_metric* dist, const int mask, const unsigned int nel
 	*p_max = sh_max;
 	// mantieni in c1 il massimo
 	if(*c1 > *c2) swap(c1,c2);
-        
-        printf("\n<c1,c2,max,mask> : (%d,%d,%d,%X)\n",*c1,*c2,*p_max,mask);
+
 }
 
 void findlink_quad(const sim_metric* dist, const int mask1, const unsigned int rows, 
@@ -85,5 +84,4 @@ void findlink_quad(const sim_metric* dist, const int mask1, const unsigned int r
 	*c2 = sh_max_i % cols;
 	*p_max = sh_max;
         
-        printf("\n<c1,c2,max,mask1,mask2> : (%d,%d,%d,%X,%X)\n",*c1,*c2,*p_max,mask1,mask2);
 }

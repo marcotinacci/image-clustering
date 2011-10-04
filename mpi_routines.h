@@ -29,7 +29,6 @@
 #define FILENAME_MAX_LEN 21
 
 //#define SKIP_CONVERSION
-//#define VERBOSE
 
 #define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
 #define MAX(X,Y) ((X) > (Y) ? (X) : (Y))

@@ -9,6 +9,13 @@ void destroy_matrix_dist(sim_metric* dist){
 	delete [] dist;
 }
 
+void destroy_matrix_parts(sim_metric** parts, int nel_parts){
+    for(int i = 0; i < nel_parts; i++){
+        delete[] parts[i];
+    }
+    delete[] parts;
+}
+
 void set(sim_metric* dist, const unsigned int nel, const unsigned int row, 
 		const unsigned int col, const sim_metric val)
 {

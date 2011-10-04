@@ -8,6 +8,10 @@ int * init_mask(const int np){
 	return mask;
 }
 
+void destroy_mask(int* mask){
+    delete[] mask;
+}
+
 int get_mask_part_tri(const int *mask, const int rank){
 	return mask[rank];
 }

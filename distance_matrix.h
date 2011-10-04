@@ -42,6 +42,16 @@ sim_metric* init_matrix_dist(const unsigned int nel);
 void destroy_matrix_dist(sim_metric* dist);
 
 /*
+ * dealloca lo spazio della matrice delle parti, ogni elemento è una 
+ * sottomatrice
+ * parts: vettore di matrici (parts[0] e' triangolare, le successive sono 
+ *      rettangolari)
+ * nel_parts: numero elementi parts
+ * 
+ */
+void destroy_matrix_parts(sim_metric** parts, int nel_parts);
+
+/*
  * indice di riga di una matrice triangolare non diagonale 
  * memorizzata per righe
  * i: indice vettore

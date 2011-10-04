@@ -11,7 +11,8 @@
 
 using namespace std;
 
-void print_results(cluster* clusters, string* img_names);
+void print_results(cluster* clusters, string* img_names, const double time, 
+        const unsigned int np);
 string get_header();
 string get_footer();
 string get_cluster_gallery(cluster* clusters, string* img_names);
