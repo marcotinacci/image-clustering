@@ -529,26 +529,20 @@ else printf("\nsend_array_nel = {0:%d, 1:%d, 2:%d, 3:%d}\n",send_array_nel[0],se
 
 	// scambio vettori delle dimensioni
 	if(mit == -1){
-printf("\nMIT\n");
 		MPI_Send((void*)send_array_nel, send_nel, MPI_UNSIGNED, dest, TAG_ARRAY_NEL_DISTS, MPI_COMM_WORLD);
 	}else if(dest == -1){
-printf("\nDEST\n");
 		MPI_Recv(recv_array_nel, recv_nel, MPI_UNSIGNED, mit, TAG_ARRAY_NEL_DISTS, MPI_COMM_WORLD,&state[0]);
 	}else{
-printf("\nELSE\n");
 		MPI_Irecv(recv_array_nel, recv_nel, MPI_UNSIGNED, mit, TAG_ARRAY_NEL_DISTS, MPI_COMM_WORLD, &req[0]);
 		MPI_Isend((void*)send_array_nel, send_nel, MPI_UNSIGNED, dest, TAG_ARRAY_NEL_DISTS, MPI_COMM_WORLD, &req[1]);
 		MPI_Waitall(2,req,state);		
 	}
 
-if(myrank == 1) printf("\nrecv_array_nel = {0:%d, 1:%d, 2:%d}, recv_nel = %d\n",recv_array_nel[0],recv_array_nel[1],recv_array_nel[2], recv_nel);
-else printf("\nrecv_array_nel = {0:%d, 1:%d, 2:%d, 3:%d}, recv_nel = %d\n",recv_array_nel[0],recv_array_nel[1],recv_array_nel[2],recv_array_nel[3], recv_nel);
-
 	/*
 		TODO calcolare solo una volta fuori dal ciclo
 	*/
-	unsigned char* send_array_sift;
-	unsigned char* recv_array_sift;
+	unsigned char* send_array_sift = NULL;
+	unsigned char* recv_array_sift = NULL;
 
 	if(mit == -1 || dest != -1){
 		// crea vettore globale sift
@@ -562,12 +556,11 @@ else printf("\nrecv_array_nel = {0:%d, 1:%d, 2:%d, 3:%d}, recv_nel = %d\n",recv_
 			}
 			begin_desc += send_array_nel[i+1];
 		}
-	}else{
-
-	printf("\nprima della new, %d * %d\n",recv_array_nel[0],SIFT_SIZE);
-		recv_array_sift = new unsigned char[recv_array_nel[0]*SIFT_SIZE];
 	}
-printf("\n__5\n");
+        
+        if(mit != -1){
+            recv_array_sift = new unsigned char[recv_array_nel[0]*SIFT_SIZE];
+        }
 
 	// scambio vettori sift globali
 	if(mit == -1){
@@ -580,7 +573,6 @@ printf("\n__5\n");
 		MPI_Isend((void*)send_array_sift, send_array_nel[0]*SIFT_SIZE, MPI_UNSIGNED_CHAR, dest, TAG_ARRAY_SIFT, MPI_COMM_WORLD, &req[1]);
 		MPI_Waitall(2,req,state);		
 	}
-printf("\n__6\n");
 	
 	// struttura i dati coi descrittori
 	SIFTs** recv_desc_array = get_array_desc(recv_array_sift, recv_array_nel, recv_nel);
@@ -591,7 +583,6 @@ printf("\n__6\n");
 	}else{
 		dist = compute_submatrix_dist(desc, local_nel, recv_desc_array, recv_nel-1);
 	}
-printf("\n__7\n");
 
 	return dist;
 }

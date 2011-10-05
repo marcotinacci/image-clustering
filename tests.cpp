@@ -2,7 +2,7 @@
 
 void test_main_mpi(int argc, char* argv[]){
         // timer 
-        double wall_timer;
+        double wall_timer = 0.;
         cluster *clusters = NULL;
         int *mask = NULL;
         int *map = NULL;
@@ -87,7 +87,6 @@ void test_main_mpi(int argc, char* argv[]){
 					nel_parts, clusters, mask);
 
 		}
-printf("\n__5\n");
                 #ifdef DBG_MASK
                         print_global_mask(mask,nel,np);
                 #endif

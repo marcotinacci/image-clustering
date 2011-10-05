@@ -6,20 +6,19 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <string>
+#include <string.h>
 #include <fstream>
 #include <omp.h>
 
 #ifdef __APPLE__
 #define CONVERT_PATH "/usr/local/bin/convert"
 #define SIFTPP_PATH "siftpp/mac/sift"
-#include <string>
-#endif
-
+#else
 #ifdef __GNUC__
 #define CONVERT_PATH "/usr/bin/convert"
 #define SIFTPP_PATH "siftpp/glx/sift"
-#include <string.h>
 #include <stdlib.h>
+#endif
 #endif
 
 #define DEBUG
