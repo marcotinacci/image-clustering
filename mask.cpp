@@ -38,13 +38,14 @@ int get_mask_row_quad(const int *mask, const int rank, const int index_part,
 
 void update_mask(int *mask, const int rank, const int index_part,
 		const int local_row, const int local_col, const int np){
-	int idx_col, idx_row, index;
+	int idx_col, index;
+	//int idx_row;
 	index = rank + index_part;
 	if(index < np){
-		idx_row = index;
+		//idx_row = index;
 		idx_col = rank;
 	}else{
-		idx_row = rank;
+		//idx_row = rank;
 		idx_col = index-np;
 	}
 	// disattiva gli indici sulla maschera

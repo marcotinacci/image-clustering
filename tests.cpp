@@ -58,13 +58,11 @@ void test_main_mpi(int argc, char* argv[]){
 		compute_map(np, &map, &nel_map);
 		master_compute_matrix(0, nel, np, local_nel, desc_array, &matrix_parts,
 				&nel_parts);
-
                 // alloca la lista di cluster, ogni cluster e' una lista di indici
                 for(int i=0; i < (int)nel; i++){
                   clusters->insert(pair<unsigned int, list<unsigned int> > (i, 
                           list<unsigned int>(1,i)));
                 }
-                
 		cout << "CLUSTERING" << endl;
 		for(unsigned int i=0; i < nel - NUM_CLUSTERS; i++){
 			max_info local_max, global_max;
@@ -89,6 +87,7 @@ void test_main_mpi(int argc, char* argv[]){
 					nel_parts, clusters, mask);
 
 		}
+printf("\n__5\n");
                 #ifdef DBG_MASK
                         print_global_mask(mask,nel,np);
                 #endif

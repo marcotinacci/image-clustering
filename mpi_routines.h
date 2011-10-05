@@ -7,6 +7,8 @@
 #include <sstream>
 #include <unistd.h>
 
+#include <string>
+
 #include "file_desc.h"
 #include "distance_matrix.h"
 #include "siftcmp.h"
@@ -25,8 +27,8 @@
 #define TAG_CLUSTER_2 			6
 #define TAG_PRINT			7
 #define IMG_MAX_LEN 350000
-#define IMG_FOLDER "images"
-#define FILENAME_MAX_LEN 21
+//#define IMG_FOLDER "images"
+#define FILENAME_MAX_LEN 30
 
 //#define SKIP_CONVERSION
 
@@ -156,7 +158,7 @@ void get_map_index(const int myrank, const unsigned int index_part, const unsign
  * rank: rango del terminale di destinazione
  * index: indice locale dell'immagine 
  */
-char* dest_path(const int rank, const unsigned int index);
+const char* dest_path(const int rank, const unsigned int index);
 
 /*
  * metodo che restituisce la mappa immagine->terminale, le

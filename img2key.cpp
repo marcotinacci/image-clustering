@@ -20,10 +20,11 @@ int img2pgm(const char* filename){
 		cerr << "Failed to execute conversion img->pgm" << endl;	
 		return -1;
 	} else if (pid==0) { 
-		// Child Process
-		char* output = new char[strlen(filename)];
+		// Child Process	
+		char* output = new char[strlen(filename)+4];
+
 		strcpy(output, filename);
-		strcat(output, ".pgm");		
+		strcat(output, string(".pgm").c_str());
 		execl(CONVERT_PATH, CONVERT_PATH, filename, output , NULL);
 		// this is executed in case of error
 		cerr << "Failed to run child process" << endl;

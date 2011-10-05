@@ -361,7 +361,7 @@ void master_scatter_keys(const int myrank, const unsigned int nel,
 					/*
 						TODO fattorizzare e parallelizzare
 					*/						
-					char* local_filename = dest_path(0, i);
+					const char* local_filename = dest_path(0, i);
 					#ifndef SKIP_CONVERSION
 						// conversione jpg->pgm
 						img2pgm(local_filename);
@@ -400,9 +400,9 @@ void slave_scatter_keys(const int myrank, const unsigned int nel,
 	// suffisso file key
 	string suffix (".key");
 	for(unsigned int i = 0; i < *local_nel; i++){
-		char* local_filename = dest_path(myrank, i);
+		const char* local_filename = dest_path(myrank, i);
 		#ifndef SKIP_CONVERSION
-			receive_file(dest_path(myrank, i), 0, myrank);
+			receive_file(local_filename, 0, myrank);
 			// conversione jpg->pgm
 			img2pgm(local_filename);
 			// conversione pgm->key
@@ -513,43 +513,62 @@ sim_metric* mpi_compute_matrix(SIFTs **desc, const unsigned int local_nel, const
 	/*
 		TODO parallelizzare
 	*/
+	
 	for(unsigned int j = 1; j < send_nel; j++){
 		send_array_nel[j] = desc[j-1]->nel;
-		sum += desc[j-1]->nel;
+		//sum += desc[j-1]->nel;
+		sum += send_array_nel[j];
 	}
 	send_array_nel[0] = sum; // il primo elemento è la somma totale
-	
+
+if(myrank == 0) printf("\nsend_array_nel = {0:%d, 1:%d, 2:%d}\n",send_array_nel[0],send_array_nel[1],send_array_nel[2]);
+else printf("\nsend_array_nel = {0:%d, 1:%d, 2:%d, 3:%d}\n",send_array_nel[0],send_array_nel[1],send_array_nel[2],send_array_nel[3]);
+
 	// crea vettore dimensioni descrittori da ricevere
 	unsigned int *recv_array_nel = new unsigned int[recv_nel];
-	
+
 	// scambio vettori delle dimensioni
 	if(mit == -1){
+printf("\nMIT\n");
 		MPI_Send((void*)send_array_nel, send_nel, MPI_UNSIGNED, dest, TAG_ARRAY_NEL_DISTS, MPI_COMM_WORLD);
 	}else if(dest == -1){
+printf("\nDEST\n");
 		MPI_Recv(recv_array_nel, recv_nel, MPI_UNSIGNED, mit, TAG_ARRAY_NEL_DISTS, MPI_COMM_WORLD,&state[0]);
 	}else{
+printf("\nELSE\n");
 		MPI_Irecv(recv_array_nel, recv_nel, MPI_UNSIGNED, mit, TAG_ARRAY_NEL_DISTS, MPI_COMM_WORLD, &req[0]);
 		MPI_Isend((void*)send_array_nel, send_nel, MPI_UNSIGNED, dest, TAG_ARRAY_NEL_DISTS, MPI_COMM_WORLD, &req[1]);
 		MPI_Waitall(2,req,state);		
 	}
-	
+
+if(myrank == 1) printf("\nrecv_array_nel = {0:%d, 1:%d, 2:%d}, recv_nel = %d\n",recv_array_nel[0],recv_array_nel[1],recv_array_nel[2], recv_nel);
+else printf("\nrecv_array_nel = {0:%d, 1:%d, 2:%d, 3:%d}, recv_nel = %d\n",recv_array_nel[0],recv_array_nel[1],recv_array_nel[2],recv_array_nel[3], recv_nel);
+
 	/*
 		TODO calcolare solo una volta fuori dal ciclo
 	*/
-	// crea vettore globale sift
-	unsigned char* send_array_sift = new unsigned char[send_array_nel[0]*SIFT_SIZE];
-	unsigned int begin_desc = 0;
-	for(unsigned int i=0; i < local_nel; i++){
-		for(unsigned int j=0; j < send_array_nel[i+1]; j++){
-			for(unsigned int k=0; k<SIFT_SIZE; k++){
-				send_array_sift[(begin_desc+j)*SIFT_SIZE+k] = get_sift(desc[i],j)[k];
+	unsigned char* send_array_sift;
+	unsigned char* recv_array_sift;
+
+	if(mit == -1 || dest != -1){
+		// crea vettore globale sift
+		send_array_sift = new unsigned char[send_array_nel[0]*SIFT_SIZE];
+		unsigned int begin_desc = 0;
+		for(unsigned int i=0; i < local_nel; i++){
+			for(unsigned int j=0; j < send_array_nel[i+1]; j++){
+				for(unsigned int k=0; k<SIFT_SIZE; k++){
+					send_array_sift[(begin_desc+j)*SIFT_SIZE+k] = get_sift(desc[i],j)[k];
+				}
 			}
+			begin_desc += send_array_nel[i+1];
 		}
-		begin_desc += send_array_nel[i+1];
+	}else{
+
+	printf("\nprima della new, %d * %d\n",recv_array_nel[0],SIFT_SIZE);
+		recv_array_sift = new unsigned char[recv_array_nel[0]*SIFT_SIZE];
 	}
-	
-	unsigned char* recv_array_sift = new unsigned char[recv_array_nel[0]*SIFT_SIZE];
-	
+printf("\n__5\n");
+
 	// scambio vettori sift globali
 	if(mit == -1){
 		MPI_Send((void*)send_array_sift, send_array_nel[0]*SIFT_SIZE, MPI_UNSIGNED_CHAR, dest, TAG_ARRAY_SIFT, MPI_COMM_WORLD);
@@ -561,6 +580,7 @@ sim_metric* mpi_compute_matrix(SIFTs **desc, const unsigned int local_nel, const
 		MPI_Isend((void*)send_array_sift, send_array_nel[0]*SIFT_SIZE, MPI_UNSIGNED_CHAR, dest, TAG_ARRAY_SIFT, MPI_COMM_WORLD, &req[1]);
 		MPI_Waitall(2,req,state);		
 	}
+printf("\n__6\n");
 	
 	// struttura i dati coi descrittori
 	SIFTs** recv_desc_array = get_array_desc(recv_array_sift, recv_array_nel, recv_nel);
@@ -571,6 +591,8 @@ sim_metric* mpi_compute_matrix(SIFTs **desc, const unsigned int local_nel, const
 	}else{
 		dist = compute_submatrix_dist(desc, local_nel, recv_desc_array, recv_nel-1);
 	}
+printf("\n__7\n");
+
 	return dist;
 }
 
@@ -749,13 +771,15 @@ unsigned int get_nel_by_rank(const int rank, const unsigned int nel, const int n
 	return get_nel_by_rank(rank, nel/np, nel%np, np);
 }
 
-char* dest_path(const int rank, const unsigned int index){
-	ostringstream osrank, osindex;
-	osrank << rank;
-	osindex << index;
-	string str = (string(IMG_FOLDER) + string("_") + osrank.str() + string("/img_") + 
-		osindex.str() + string(".jpg"));
-	return (char*)str.c_str();
+const char* dest_path(const int rank, const unsigned int index){
+	char *filename = new char[FILENAME_MAX_LEN];
+	sprintf(filename, "images_%d/img_%d.jpg", rank, index);
+//	ostringstream osrank, osindex;
+//	osrank << rank;
+//	osindex << index;
+//	string str = (string(IMG_FOLDER) + string("_") + osrank.str() + string("/img_") + 
+//		osindex.str() + string(".jpg"));
+	return filename;
 }
 
 void copy_local_file(const char* sourcename, const char* destname){
@@ -810,6 +834,7 @@ void send_file(const char* filename, int dest)
 
 void receive_file(const char* filename, int src, int dest)
 {
+
 	MPI_Status state;
 	int real_size;
 	char* buffer = new char[IMG_MAX_LEN];

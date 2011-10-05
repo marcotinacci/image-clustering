@@ -7,6 +7,10 @@
 #include <string>
 #include <omp.h>
 
+#ifdef __GNUC__
+#include <stdlib.h>
+#endif
+
 #include "file_desc.h"
 #include "distance_matrix.h"
 
