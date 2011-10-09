@@ -84,10 +84,6 @@ void get_image_names(string** names, unsigned int* nel){
 	inFile.clear();
 	inFile.seekg(0);
 
-	/*
-		TODO parallelizzare la lettura del file
-	*/
-
 	// lettura file
 	for(unsigned int i = 0; i < *nel; i++){
 		getline(inFile,(*names)[i]);

@@ -32,7 +32,6 @@ void merge_dist(sim_metric* dist, int* mask, const unsigned int nel, const unsig
 
 void merge_clusters(cluster* clusters, const unsigned int c1, const unsigned int c2){
 	// aggiorna i cluster
-    printf("aggiorna clusters : (c1,c2) = (%d,%d)\n",c1,c2);
 	list<unsigned int> *a_list = &(*clusters)[c2];
 	list<unsigned int> *b_list = &(*clusters)[c1];
 	// aggiungi alla lista a gli elementi della lista b

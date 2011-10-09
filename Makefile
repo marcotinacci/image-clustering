@@ -7,6 +7,13 @@ SOURCES=main.cpp siftget.cpp siftcmp.cpp merge.cpp findlink.cpp distance_matrix.
 OBJECTS=$(SOURCES:.cpp=.o)
 EXECUTABLE=app
 
+#MACHINE= $(shell uname -s)
+#ifeq ($(MACHINE),Darwin)
+#   EXECUTABLE=bin/mac/app
+#else
+#   EXECUTABLE=bin/glx/app
+#endif
+
 all: $(SOURCES) $(EXECUTABLE)
 	
 $(EXECUTABLE) : $(OBJECTS)

@@ -97,15 +97,12 @@ void test_main_mpi(int argc, char* argv[]){
                         print_clusters(clusters);
                 #endif
                 
-
-                
-
-
 	}else{ // slaves
 		slave_scatter_keys(myrank, nel, np, &local_nel, &desc_array);
-		
+		#ifdef DBG_MATRIX
 		unsigned int nel_map = 0;
 		compute_map(np, &map, &nel_map);
+                #endif
 		slave_compute_matrix(myrank, nel, np, desc_array, local_nel,
 				&matrix_parts, &nel_parts);
                 

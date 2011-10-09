@@ -31,9 +31,6 @@ void master_clusterize(const max_info &maxinfo, const int *map,
 		info_mit[4] = 0;
 		info_dest[4] = 1;
 
-		/*
-			TODO usare Isend? gli interleaving sono safe?
-		 */
 		// gestione comunicazione
 		if(info_mit[0] == 0 && info_dest[0] == 0){ // master-master
 			sim_metric *buf = get_local_stripe(0, np, nel, info_mit,
@@ -58,7 +55,6 @@ void master_clusterize(const max_info &maxinfo, const int *map,
 					MPI_COMM_WORLD);
 			MPI_Send(info_mit, 5, MPI_UNSIGNED, info_mit[0], TAG_CLUSTER_1,
 					MPI_COMM_WORLD);
-//			send_stripe(0, np, nel, info1, *matrix_parts);
                         
                         sim_metric* buf = recv_stripe(0, np, nel, info_mit, matrix_parts);
                         // aggiornare elementi locali
@@ -355,34 +351,32 @@ void master_scatter_keys(const int myrank, const unsigned int nel,
 	for(unsigned int i = 0; i < q+1; i++){ // cicla sull'offset
 		unsigned int k = i;
 		if(i < q){
-			for(unsigned int j = 0; j < np1; j++, k+=q){ // cicla su le partizioni q
-				if(j==0){
-					copy_local_file(img_names[k].c_str(), dest_path(0, i));
-					/*
-						TODO fattorizzare e parallelizzare
-					*/						
-					const char* local_filename = dest_path(0, i);
-					#ifndef SKIP_CONVERSION
-						// conversione jpg->pgm
-						img2pgm(local_filename);
-						// conversione pgm->key
-						pgm2key(ext_pgm(local_filename));
-					#endif
-					// leggi i sifts
-					(*desc_array)[i] = get_sifts((string(local_filename) +
-							string(".key")).c_str());
-				}else{
-					#ifndef SKIP_CONVERSION
-						send_file(img_names[k].c_str(), j);
-					#endif
-				}
-			}
+                    for(unsigned int j = 0; j < np1; j++, k+=q){ // cicla su le partizioni q
+                        if(j==0){
+                            copy_local_file(img_names[k].c_str(), dest_path(0, i));					
+                            const char* local_filename = dest_path(0, i);
+                            #ifndef SKIP_CONVERSION
+                                    // conversione jpg->pgm
+                                    img2pgm(local_filename);
+                                    // conversione pgm->key
+                                    pgm2key(ext_pgm(local_filename));
+                            #endif
+                            // leggi i sifts
+                            (*desc_array)[i] = get_sifts((string(local_filename) +
+                                            string(".key")).c_str());
+                        }else{
+                            #ifndef SKIP_CONVERSION
+                                    send_file(img_names[k].c_str(), j);
+                            #endif                                
+                        }
+                    }
 		}else{
-			// fai avanzare l'indice all'ultimo elemento della prima partizione q+1
-			k = i + q * np1;
+                    // fai avanzare l'indice all'ultimo elemento della prima partizione q+1
+                    k = i + q * np1;
 		}
+
 		for(unsigned int j = np1; j < np; j++, k += q+1){ // cicla su le partizioni q+1
-			send_file(img_names[k].c_str(), j);
+                    send_file(img_names[k].c_str(), j);
 		}
 	}
 }
@@ -420,8 +414,9 @@ void compute_map(const unsigned int np, int **map, unsigned int *nel_map)
 	// numero elementi mappa
 	*nel_map = np*(np-1)/2;
 	// calcola mappa
+        #pragma omp parallel for num_threads(omp_get_num_procs()) schedule(static)
 	for(unsigned int i = 0; i < *nel_map; i++){
-		set_map(*map, np, i % np, (i + i/np + 1) % np, i % np);
+            set_map(*map, np, i % np, (i + i/np + 1) % np, i % np);
 	}
 }
 
@@ -437,11 +432,13 @@ void master_compute_matrix(const int myrank, const unsigned int nel,
 	mat[0] = compute_matrix_dist(desc_array,local_nel);
 	for(unsigned int i = 0; i < num_cycle; i++){
 		// calcola sotto-matrici remote
-		for(unsigned int j = 1; j < (unsigned int)np; j++){
+                #pragma omp parallel for num_threads(omp_get_num_procs()) schedule(dynamic)
+		for(int j = 1; j < np; j++){
 			int info[] = {(j+i+1) % np, (j-i-1+np) % np};
 			MPI_Send((void*)info, 2, MPI_INT, j, TAG_TRANSFER_INFO,
 					MPI_COMM_WORLD);
 		}
+                
 		// calcola sotto-matrice locale
 		mat[i+1] = mpi_compute_matrix(desc_array, local_nel, nel, np, myrank,
 				(i+1) % np, (np-i-1) % np);
@@ -510,19 +507,15 @@ sim_metric* mpi_compute_matrix(SIFTs **desc, const unsigned int local_nel, const
 	unsigned int *send_array_nel = new unsigned int[send_nel];
 	unsigned int sum = 0;
 
-	/*
-		TODO parallelizzare
-	*/
-	
-	for(unsigned int j = 1; j < send_nel; j++){
-		send_array_nel[j] = desc[j-1]->nel;
-		//sum += desc[j-1]->nel;
-		sum += send_array_nel[j];
-	}
+        #pragma omp parallel for num_threads(omp_get_num_procs()) schedule(static)
+        for(unsigned int j = 1; j < send_nel; j++){
+            send_array_nel[j] = desc[j-1]->nel;
+            #pragma omp critical
+            {
+                sum += send_array_nel[j];
+            }
+        }
 	send_array_nel[0] = sum; // il primo elemento è la somma totale
-
-if(myrank == 0) printf("\nsend_array_nel = {0:%d, 1:%d, 2:%d}\n",send_array_nel[0],send_array_nel[1],send_array_nel[2]);
-else printf("\nsend_array_nel = {0:%d, 1:%d, 2:%d, 3:%d}\n",send_array_nel[0],send_array_nel[1],send_array_nel[2],send_array_nel[3]);
 
 	// crea vettore dimensioni descrittori da ricevere
 	unsigned int *recv_array_nel = new unsigned int[recv_nel];
@@ -535,12 +528,9 @@ else printf("\nsend_array_nel = {0:%d, 1:%d, 2:%d, 3:%d}\n",send_array_nel[0],se
 	}else{
 		MPI_Irecv(recv_array_nel, recv_nel, MPI_UNSIGNED, mit, TAG_ARRAY_NEL_DISTS, MPI_COMM_WORLD, &req[0]);
 		MPI_Isend((void*)send_array_nel, send_nel, MPI_UNSIGNED, dest, TAG_ARRAY_NEL_DISTS, MPI_COMM_WORLD, &req[1]);
-		MPI_Waitall(2,req,state);		
+		MPI_Waitall(2,req,state);
 	}
 
-	/*
-		TODO calcolare solo una volta fuori dal ciclo
-	*/
 	unsigned char* send_array_sift = NULL;
 	unsigned char* recv_array_sift = NULL;
 
@@ -550,6 +540,7 @@ else printf("\nsend_array_nel = {0:%d, 1:%d, 2:%d, 3:%d}\n",send_array_nel[0],se
 		unsigned int begin_desc = 0;
 		for(unsigned int i=0; i < local_nel; i++){
 			for(unsigned int j=0; j < send_array_nel[i+1]; j++){
+                                #pragma omp parallel for num_threads(omp_get_num_procs()) schedule(static)
 				for(unsigned int k=0; k<SIFT_SIZE; k++){
 					send_array_sift[(begin_desc+j)*SIFT_SIZE+k] = get_sift(desc[i],j)[k];
 				}
@@ -613,44 +604,44 @@ void local_max_reduce(sim_metric** parts, const unsigned int nel_parts,
 		const int myrank, const unsigned int np, const unsigned int nel,
 		max_info * maxinf, const int *mask)
 {
-	/*
-		TODO mantenere i massimi di ogni part memorizzati per velocizzare la ricerca
-	*/
-	
 	const unsigned int q = nel/np;
 	const unsigned int r = nel%np;
 	const unsigned int local_nel = get_nel_by_rank(myrank, q, r, np);
 	unsigned int index_part = 0;
 	sim_metric max = 0;
 	unsigned int c1, c2;
-	// prima sotto-matrice triangolare
-	findlink_tri(parts[0], get_mask_part_tri(mask, myrank), local_nel, &c1, &c2,
-			&max);
-	// successive sotto-matrici quadrate
-	for(unsigned int i = 1; i < nel_parts + 1; i++){
-		// rango della seconda coordinata
-		int rank2 = (myrank + i) % np;
-		unsigned int tmp_c1, tmp_c2;
-		sim_metric tmp_max;
-		if(myrank < rank2){
-                        findlink_quad(parts[i], get_mask_row_quad(mask, myrank, i ,np),
-					local_nel, get_mask_col_quad(mask, myrank, i ,np),
-					get_nel_by_rank(rank2, q, r, np), &tmp_c1, &tmp_c2,
-					&tmp_max);
-		}else{
-			findlink_quad(parts[i], get_mask_row_quad(mask, myrank, i ,np),
-					get_nel_by_rank(rank2, q, r, np),
-					get_mask_col_quad(mask, myrank, i ,np), local_nel, &tmp_c1,
-					&tmp_c2, &tmp_max);
-		}
+        
+        // prima sotto-matrice triangolare
+        findlink_tri(parts[0], get_mask_part_tri(mask, myrank), local_nel, &c1, &c2,
+                        &max);
+        // successive sotto-matrici quadrate
+        //#pragma omp parallel for num_threads(omp_get_num_threads()) schedule(dynamic)
+        for(unsigned int i = 1; i < nel_parts + 1; i++){
+            // rango della seconda coordinata
+            int rank2 = (myrank + i) % np;
+            unsigned int tmp_c1, tmp_c2;
+            sim_metric tmp_max;
+            if(myrank < rank2){
+                    findlink_quad(parts[i], get_mask_row_quad(mask, myrank, i ,np),
+                                    local_nel, get_mask_col_quad(mask, myrank, i ,np),
+                                    get_nel_by_rank(rank2, q, r, np), &tmp_c1, &tmp_c2,
+                                    &tmp_max);
+            }else{
+                    findlink_quad(parts[i], get_mask_row_quad(mask, myrank, i ,np),
+                                    get_nel_by_rank(rank2, q, r, np),
+                                    get_mask_col_quad(mask, myrank, i ,np), local_nel, &tmp_c1,
+                                    &tmp_c2, &tmp_max);
+            }
 
-		if(tmp_max > max){
-			max = tmp_max;
-			index_part = i;
-			c1 = tmp_c1;
-			c2 = tmp_c2;
-		}
-	}
+            //#pragma omp critical
+            if(tmp_max > max){
+                    max = tmp_max;
+                    index_part = i;
+                    c1 = tmp_c1;
+                    c2 = tmp_c2;
+            }
+        }
+        
 	maxinf->rank = myrank;
 	maxinf->val = max;
 	maxinf->row = c1;

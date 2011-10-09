@@ -46,10 +46,6 @@ SIFTs* get_sifts(const char* file){
 	inFile.clear();
 	inFile.seekg(0);
 
-	/*
-		TODO parallelizzare la lettura del file
-	*/
-
 	// lettura file
 	// salta i primi quattro dati
 	inFile >> temp;
@@ -58,9 +54,9 @@ SIFTs* get_sifts(const char* file){
 	inFile >> temp;
 	for(int sift_count = 0; !inFile.eof(); sift_count++){
 		// lettura delle 128 distanze
-		for(int i = 0; i < SIFT_SIZE; i++){;
+		for(int j = 0; j < SIFT_SIZE; j++){
 			inFile >> x;
-			desc->sift_array[sift_count*SIFT_SIZE+i] = x;
+			desc->sift_array[sift_count*SIFT_SIZE+j] = x;
 		}
 		// salta i primi quattro dati di ogni nuova riga
 		inFile >> temp;
