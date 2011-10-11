@@ -132,7 +132,7 @@ void test_main_mpi(int argc, char* argv[]){
                 double elapsedTime = omp_get_wtime() - wall_timer;
                 cout << "STAMPA RISULTATI" << endl;
                 // stampa risultati
-                print_results(clusters,img_names, elapsedTime,np);
+                print_results(clusters,img_names, elapsedTime,np,nel);
                 
                 // distruggi i cluster
                 destroy_cluster(clusters);

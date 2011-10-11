@@ -432,7 +432,8 @@ void master_compute_matrix(const int myrank, const unsigned int nel,
 	mat[0] = compute_matrix_dist(desc_array,local_nel);
 	for(unsigned int i = 0; i < num_cycle; i++){
 		// calcola sotto-matrici remote
-                #pragma omp parallel for num_threads(omp_get_num_procs()) schedule(dynamic)
+                // non parallelizzare -> errori run-time su linux
+                // #pragma omp parallel for num_threads(omp_get_num_procs()) schedule(dynamic)
 		for(int j = 1; j < np; j++){
 			int info[] = {(j+i+1) % np, (j-i-1+np) % np};
 			MPI_Send((void*)info, 2, MPI_INT, j, TAG_TRANSFER_INFO,

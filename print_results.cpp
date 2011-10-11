@@ -1,7 +1,7 @@
 #include "print_results.h"
 
 void print_results(cluster* clusters, string* img_names, const double time, 
-        const unsigned int np){
+        const unsigned int np, const unsigned int nel){
     // apri file
     ofstream outfile(FILENAME);
 
@@ -12,6 +12,7 @@ void print_results(cluster* clusters, string* img_names, const double time,
         outfile << "<h1>Clustering Results</h1>" << endl;
         // configurazione
         outfile << "<h2>Configuration</h2>" << endl;
+        outfile << "Numero immagini: " << nel << "<br>" << endl;
         outfile << "Numero terminali: " << np << "<br>" << endl;
         outfile << "Tempo impiegato: " << time << " secondi<br>" << endl;
         // scrivi la galleria
